@@ -1,0 +1,26 @@
+namespace Catering.UserService.Application.Dtos;
+
+public sealed record UserDto(
+    Guid Id,
+    string Email,
+    string FirstName,
+    string LastName,
+    string TcIdentityNumber,
+    string PhoneNumber,
+    DateOnly? BirthDate,
+    string? Address,
+    string? ProfilePictureUrl,
+    Guid DepartmentId,
+    string DepartmentName,
+    Guid PositionId,
+    string PositionName,
+    DateOnly HireDate,
+    DateOnly? TerminationDate,
+    string Status,
+    string Role,
+    bool HasDisability,
+    string? DisabilityDescription,
+    decimal? SalaryCeiling,
+    string? Notes,
+    DateTimeOffset? LastLoginAt,
+    DateTimeOffset CreatedAt);

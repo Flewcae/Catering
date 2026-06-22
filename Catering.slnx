@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.CQRS/Catering.BuildingBlocks.CQRS.csproj" />
+    <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.Domain/Catering.BuildingBlocks.Domain.csproj" />
+    <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.Messaging/Catering.BuildingBlocks.Messaging.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Notification/">
+    <Project Path="src/Services/Notification/Catering.NotificationService.Api/Catering.NotificationService.Api.csproj" />
+    <Project Path="src/Services/Notification/Catering.NotificationService.Application/Catering.NotificationService.Application.csproj" />
+    <Project Path="src/Services/Notification/Catering.NotificationService.Domain/Catering.NotificationService.Domain.csproj" />
+    <Project Path="src/Services/Notification/Catering.NotificationService.Infrastructure/Catering.NotificationService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/User/">
+    <Project Path="src/Services/User/Catering.UserService.Api/Catering.UserService.Api.csproj" />
+    <Project Path="src/Services/User/Catering.UserService.Application/Catering.UserService.Application.csproj" />
+    <Project Path="src/Services/User/Catering.UserService.Domain/Catering.UserService.Domain.csproj" />
+    <Project Path="src/Services/User/Catering.UserService.Infrastructure/Catering.UserService.Infrastructure.csproj" />
+  </Folder>
+</Solution>

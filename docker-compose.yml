@@ -1,0 +1,80 @@
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: catering-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:29092,CONTROLLER://:9093,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  user-db:
+    image: postgres:17-alpine
+    container_name: catering-user-db
+    environment:
+      POSTGRES_DB: catering_users
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - catering-user-db-data:/var/lib/postgresql/data
+
+  notification-db:
+    image: postgres:17-alpine
+    container_name: catering-notification-db
+    environment:
+      POSTGRES_DB: catering_notifications
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - catering-notification-db-data:/var/lib/postgresql/data
+
+  user-api:
+    build:
+      context: .
+      dockerfile: src/Services/User/Catering.UserService.Api/Dockerfile
+    container_name: catering-user-api
+    ports:
+      - "5101:8080"
+    environment:
+      ConnectionStrings__UserDb: "Host=user-db;Port=5432;Database=catering_users;Username=postgres;Password=postgres"
+      Kafka__BootstrapServers: "kafka:29092"
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      - user-db
+      - kafka
+
+  notification-api:
+    build:
+      context: .
+      dockerfile: src/Services/Notification/Catering.NotificationService.Api/Dockerfile
+    container_name: catering-notification-api
+    ports:
+      - "5102:8080"
+    environment:
+      ConnectionStrings__NotificationDb: "Host=notification-db;Port=5432;Database=catering_notifications;Username=postgres;Password=postgres"
+      Kafka__BootstrapServers: "kafka:29092"
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      - notification-db
+      - kafka
+
+volumes:
+  catering-user-db-data:
+  catering-notification-db-data:
