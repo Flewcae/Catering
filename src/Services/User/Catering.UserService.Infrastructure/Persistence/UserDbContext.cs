@@ -10,6 +10,7 @@ public sealed class UserDbContext(DbContextOptions<UserDbContext> options) : DbC
     public DbSet<Position> Positions => Set<Position>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetRequest> PasswordResetRequests => Set<PasswordResetRequest>();
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +75,17 @@ public sealed class UserDbContext(DbContextOptions<UserDbContext> options) : DbC
             builder.Property(p => p.CodeHash).HasMaxLength(128).IsRequired();
             builder.Property(p => p.Channel).HasConversion<string>().HasMaxLength(16);
             builder.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DeviceToken>(builder =>
+        {
+            builder.ToTable("device_tokens");
+            builder.HasKey(dt => dt.Id);
+            builder.Property(dt => dt.Token).HasMaxLength(512).IsRequired();
+            builder.Property(dt => dt.Platform).HasMaxLength(32).IsRequired();
+            builder.HasIndex(dt => dt.Token).IsUnique();
+            builder.HasIndex(dt => dt.UserId);
+            builder.HasOne(dt => dt.User).WithMany().HasForeignKey(dt => dt.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

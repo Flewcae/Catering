@@ -6,6 +6,8 @@
 | `catering.notification-events` | NotificationService | (şu an dinleyen yok, ileride audit/reporting servisi için ayrılmış) | `NotificationSentIntegrationEvent` |
 | `catering.password-reset-requested-events` | UserService | (henüz dinleyen yok — bkz. [Mimari](mimari.md)) | `PasswordResetRequestedIntegrationEvent` |
 | `catering.password-changed-events` | UserService | (henüz dinleyen yok) | `PasswordChangedIntegrationEvent` |
+| `catering.device-token-registered-events` | UserService | NotificationService | `DeviceTokenRegisteredIntegrationEvent` |
+| `catering.device-token-revoked-events` | UserService | NotificationService | `DeviceTokenRevokedIntegrationEvent` |
 
 ## Payload örnekleri
 
@@ -40,6 +42,26 @@
 {
   "userId": "...",
   "email": "ayse.yilmaz@catering.local"
+}
+```
+
+### `DeviceTokenRegisteredIntegrationEvent`
+
+```json
+{
+  "userId": "...",
+  "token": "device-token-123",
+  "platform": "android",
+  "registeredAt": "2026-06-23T10:00:00Z"
+}
+```
+
+### `DeviceTokenRevokedIntegrationEvent`
+
+```json
+{
+  "userId": "...",
+  "token": "device-token-123"
 }
 ```
 

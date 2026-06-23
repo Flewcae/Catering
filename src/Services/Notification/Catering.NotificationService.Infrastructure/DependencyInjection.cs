@@ -18,14 +18,23 @@ public static class DependencyInjection
             options.UseNpgsql(configuration.GetConnectionString("NotificationDb")));
 
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<ISmsSender, ConsoleSmsSender>();
-        services.AddScoped<IPushNotificationSender, ConsolePushNotificationSender>();
+
+        services.Configure<FirebaseOptions>(configuration.GetSection(FirebaseOptions.SectionName));
+        services.AddScoped<IPushNotificationSender, FirebaseCloudMessagingSender>();
 
         services.AddScoped<IIntegrationEventHandler<UserCreatedIntegrationEvent>, Application.IntegrationEventHandlers.UserCreatedIntegrationEventHandler>();
         services.AddHostedService<UserCreatedConsumer>();
+
+        services.AddScoped<IIntegrationEventHandler<DeviceTokenRegisteredIntegrationEvent>, Application.IntegrationEventHandlers.DeviceTokenRegisteredIntegrationEventHandler>();
+        services.AddHostedService<DeviceTokenRegisteredConsumer>();
+
+        services.AddScoped<IIntegrationEventHandler<DeviceTokenRevokedIntegrationEvent>, Application.IntegrationEventHandlers.DeviceTokenRevokedIntegrationEventHandler>();
+        services.AddHostedService<DeviceTokenRevokedConsumer>();
 
         return services;
     }

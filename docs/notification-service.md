@@ -21,10 +21,10 @@ kullanıyorsanız, `userId` değişkenini elle de girebilirsiniz.
 |---|---|
 | Email | **Gerçek SMTP üzerinden gönderiyor** (`SmtpEmailSender`, MailKit) — aşağıdaki "Email kurulumu" bölümüne bakın. |
 | SMS | Stub — `ConsoleSmsSender` sadece konsola loglar, gerçek bir sağlayıcıya (örn. Twilio) gitmez. |
-| Push | Stub — `ConsolePushNotificationSender` sadece konsola loglar, gerçek bir sağlayıcıya (örn. FCM) gitmez. |
+| Push | **Gerçek Firebase Cloud Messaging üzerinden gönderiyor** (`FirebaseCloudMessagingSender`, FirebaseAdmin SDK) — aşağıdaki "Push (Firebase) kurulumu" bölümüne bakın. |
 
-SMS ve push için gerçek sağlayıcı entegrasyonu daha sonra yapılacak; o zamana kadar bu iki kanal
-nesne üretip veritabanına `Sent` olarak kaydediyor ama hiçbir yere fiilen göndermiyor.
+SMS için gerçek sağlayıcı entegrasyonu daha sonra yapılacak; o zamana kadar bu kanal nesne üretip
+veritabanına `Sent` olarak kaydediyor ama hiçbir yere fiilen göndermiyor.
 
 ## Email kurulumu
 
@@ -79,6 +79,46 @@ her email gerçek bir kutuya gitmeden Mailtrap arayüzünde yakalanır.
 `SendEmailNotificationCommandHandler` bu hatayı yakalar ve bildirimi `Failed` durumunda kaydeder
 — yani servis çökmez, sadece email gönderilmez.
 
+## Push (Firebase) kurulumu
+
+Push gönderimi `Catering.NotificationService.Infrastructure.Channels.FirebaseCloudMessagingSender`
+ile FirebaseAdmin SDK üzerinden gerçek bir Firebase projesine bağlanır. Çalışması için
+`appsettings.json`'daki (veya tercihen aşağıda anlatılan secret yönetimiyle) `Firebase` bölümünü
+doldurmanız gerekir:
+
+```json
+"Firebase": {
+  "ProjectId": "catering-12345",
+  "CredentialsJson": "{\"type\":\"service_account\",...}"
+}
+```
+
+| Alan | Açıklama |
+|---|---|
+| `ProjectId` | Firebase projenizin proje kimliği (Firebase Console → Proje Ayarları). |
+| `CredentialsJson` | Firebase Console → Proje Ayarları → Hizmet Hesapları → "Yeni özel anahtar oluştur" ile indirdiğiniz JSON dosyasının tüm içeriği. |
+
+> ⚠️ **Bu JSON bir özel anahtardır, commit etmeyin** — SMTP şifresiyle aynı bilinen sınırlamaya
+> tabidir (bkz. [Mimari](mimari.md) → Bilinen sınırlamalar). Lokalde geliştirirken
+> `dotnet user-secrets` ile saklayın:
+>
+> ```bash
+> cd src/Services/Notification/Catering.NotificationService.Api
+> dotnet user-secrets init
+> dotnet user-secrets set "Firebase:ProjectId" "catering-12345"
+> dotnet user-secrets set "Firebase:CredentialsJson" "$(cat service-account.json)"
+> ```
+>
+> Docker Compose ile çalıştırıyorsanız `docker-compose.yml`'i değiştirmeniz gerekmez —
+> `notification-api` servisi `Firebase__*` ortam değişkenlerini proje köküdeki `.env` dosyasından
+> (`FIREBASE_PROJECT_ID`, `FIREBASE_CREDENTIALS_JSON`) okuyacak şekilde zaten ayarlı. JSON'ı `.env`
+> dosyasına tek satıra sıkıştırarak yazın. Kurulum için [Başlarken](baslarken.md) →
+> "Seçenek B" bölümüne bakın.
+
+`Firebase` bölümü boş bırakılırsa (`ProjectId`/`CredentialsJson` boş string) Firebase'e bağlanma
+denemesi başarısız olur; `SendPushNotificationCommandHandler` bu hatayı yakalar ve bildirimi
+`Failed` durumunda kaydeder — yani servis çökmez, sadece push gönderilmez.
+
 ## Email gönder
 
 ```bash
@@ -117,13 +157,35 @@ curl --location 'http://localhost:5102/api/notifications/push' \
 }'
 ```
 
-Bu üç uçtan dönen yanıt `200 OK` + bildirimin `Guid` id'sidir. Email artık yukarıdaki SMTP
-kurulumuyla gerçekten gönderilir; SMS ve push hâlâ stub'tır — `ConsoleSmsSender` /
-`ConsolePushNotificationSender` sadece konsola loglar, gerçek bir sağlayıcıya (Twilio, FCM vb.)
-gitmez. Onlar için de gerçek entegrasyon eklemek isterseniz `Catering.NotificationService.Application.Abstractions`
-altındaki `ISmsSender` / `IPushNotificationSender` arayüzlerinin yeni implementasyonlarını yazıp
-`DependencyInjection.cs`'te kayıt etmeniz yeterlidir — `SmtpEmailSender` zaten bu desenin email
-için yapılmış hâlidir.
+Bu üç uçtan dönen yanıt `200 OK` + bildirimin `Guid` id'sidir. Email ve push artık yukarıdaki
+SMTP/Firebase kurulumlarıyla gerçekten gönderilir; SMS hâlâ stub'tır — `ConsoleSmsSender` sadece
+konsola loglar, gerçek bir sağlayıcıya (Twilio vb.) gitmez. Onun için de gerçek entegrasyon eklemek
+isterseniz `Catering.NotificationService.Application.Abstractions` altındaki `ISmsSender`
+arayüzünün yeni bir implementasyonunu yazıp `DependencyInjection.cs`'te kayıt etmeniz yeterlidir —
+`SmtpEmailSender`/`FirebaseCloudMessagingSender` zaten bu desenin email/push için yapılmış hâlidir.
+
+Yukarıdaki `/push` ucu, çağıranın cihaz token'ını doğrudan body'de göndermesini bekler. Token'ı
+bilmiyorsanız (örn. sadece `userId` elinizdeyse), [UserService](user-service.md)'e kayıtlı cihaz
+token'larına göndermek için aşağıdaki uca bakın.
+
+## Push bildirim gönder (UserId ile, tüm cihazlara)
+
+[UserService](user-service.md) → "Cihaz token'ı kaydet" ile kayıt edilmiş cihaz token'ları,
+`DeviceTokenRegisteredIntegrationEvent` üzerinden NotificationService'te yerel bir önbellekte
+tutulur (`device_tokens` tablosu). Bu uç, verilen `userId`'ye kayıtlı tüm cihazlara aynı bildirimi
+gönderir:
+
+```bash
+curl --location 'http://localhost:5102/api/notifications/push/user/{{userId}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "title": "Hatırlatma",
+  "body": "Yarın vardiyanız var."
+}'
+```
+
+Yanıt, gönderilen her cihaz için oluşturulan bildirim id'lerinin listesidir (`200 OK` + `Guid[]`).
+Kullanıcının kayıtlı cihazı yoksa boş liste döner (hata fırlatmaz).
 
 ## Kullanıcının bildirimlerini listele
 

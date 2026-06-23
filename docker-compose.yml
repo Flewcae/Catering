@@ -78,6 +78,8 @@ services:
       Smtp__Password: "${SMTP_PASSWORD:-}"
       Smtp__FromAddress: "${SMTP_FROM_ADDRESS:-}"
       Smtp__FromName: "${SMTP_FROM_NAME:-Catering}"
+      Firebase__ProjectId: "${FIREBASE_PROJECT_ID:-}"
+      Firebase__CredentialsJson: "${FIREBASE_CREDENTIALS_JSON:-}"
     depends_on:
       - notification-db
       - kafka

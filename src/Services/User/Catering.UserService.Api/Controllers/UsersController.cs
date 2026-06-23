@@ -1,5 +1,7 @@
 using Catering.UserService.Application.Abstractions;
 using Catering.UserService.Application.Commands.ChangePassword;
+using Catering.UserService.Application.Commands.RegisterDeviceToken;
+using Catering.UserService.Application.Commands.RevokeDeviceToken;
 using Catering.UserService.Application.Commands.UpdateEmploymentDetails;
 using Catering.UserService.Application.Commands.UpdateProfile;
 using Catering.UserService.Application.Commands.UpdateUserStatus;
@@ -40,6 +42,26 @@ public sealed class UsersController(IMediator mediator, ICurrentUserService curr
     {
         await mediator.Send(
             new ChangePasswordCommand(currentUserService.UserId!.Value, request.CurrentPassword, request.NewPassword),
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("me/device-tokens")]
+    public async Task<IActionResult> RegisterDeviceToken(RegisterDeviceTokenRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RegisterDeviceTokenCommand(currentUserService.UserId!.Value, request.Token, request.Platform),
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("me/device-tokens/revoke")]
+    public async Task<IActionResult> RevokeDeviceToken(RevokeDeviceTokenRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RevokeDeviceTokenCommand(currentUserService.UserId!.Value, request.Token),
             cancellationToken);
 
         return NoContent();
@@ -88,3 +110,7 @@ public sealed record ChangePasswordRequest(string CurrentPassword, string NewPas
 public sealed record UpdateEmploymentDetailsRequest(Guid DepartmentId, Guid PositionId, decimal? SalaryCeiling, bool HasDisability, string? DisabilityDescription, string? Notes);
 
 public sealed record UpdateUserStatusRequest(UserStatus NewStatus, DateOnly? TerminationDate);
+
+public sealed record RegisterDeviceTokenRequest(string Token, string Platform);
+
+public sealed record RevokeDeviceTokenRequest(string Token);

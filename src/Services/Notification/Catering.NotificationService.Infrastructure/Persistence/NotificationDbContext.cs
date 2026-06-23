@@ -6,6 +6,7 @@ namespace Catering.NotificationService.Infrastructure.Persistence;
 public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext> options) : DbContext(options)
 {
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,16 @@ public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext
             builder.Property(n => n.ErrorMessage).HasMaxLength(2000);
             builder.HasIndex(n => n.UserId);
             builder.Ignore(n => n.DomainEvents);
+        });
+
+        modelBuilder.Entity<DeviceToken>(builder =>
+        {
+            builder.ToTable("device_tokens");
+            builder.HasKey(dt => dt.Id);
+            builder.Property(dt => dt.Token).HasMaxLength(512).IsRequired();
+            builder.Property(dt => dt.Platform).HasMaxLength(32).IsRequired();
+            builder.HasIndex(dt => dt.Token).IsUnique();
+            builder.HasIndex(dt => dt.UserId);
         });
     }
 }

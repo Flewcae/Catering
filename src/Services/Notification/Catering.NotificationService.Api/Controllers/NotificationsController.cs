@@ -1,5 +1,6 @@
 using Catering.NotificationService.Application.Commands.SendEmailNotification;
 using Catering.NotificationService.Application.Commands.SendPushNotification;
+using Catering.NotificationService.Application.Commands.SendPushNotificationToUser;
 using Catering.NotificationService.Application.Commands.SendSmsNotification;
 using Catering.NotificationService.Application.Dtos;
 using Catering.NotificationService.Application.Queries.GetNotificationsForUser;
@@ -33,6 +34,13 @@ public sealed class NotificationsController(IMediator mediator) : ControllerBase
         return Ok(notificationId);
     }
 
+    [HttpPost("push/user/{userId:guid}")]
+    public async Task<ActionResult<List<Guid>>> SendPushToUser(Guid userId, SendPushNotificationToUserRequest request, CancellationToken cancellationToken)
+    {
+        var notificationIds = await mediator.Send(new SendPushNotificationToUserCommand(userId, request.Title, request.Body), cancellationToken);
+        return Ok(notificationIds);
+    }
+
     [HttpGet("user/{userId:guid}")]
     public async Task<ActionResult<List<NotificationDto>>> GetForUser(Guid userId, CancellationToken cancellationToken)
     {
@@ -40,3 +48,5 @@ public sealed class NotificationsController(IMediator mediator) : ControllerBase
         return Ok(notifications);
     }
 }
+
+public sealed record SendPushNotificationToUserRequest(string Title, string Body);

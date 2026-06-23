@@ -312,6 +312,39 @@ curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/status
 kullanıcının tüm refresh token'ları otomatik iptal edilir (zorunlu çıkış). `Terminated`
 durumunda `terminationDate` verilmezse otomatik olarak bugünün tarihi atanır.
 
+### Cihaz token'ı kaydet (Firebase push)
+
+```bash
+curl --location 'http://localhost:5101/api/users/me/device-tokens' \
+--header 'Authorization: Bearer {{accessToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "token": "device-token-123",
+  "platform": "android"
+}'
+```
+
+Yanıt: `204 No Content`. Aynı token başka bir kullanıcıya kayıtlıysa (örn. paylaşılan bir cihaz)
+sahibi otomatik olarak çağıran kullanıcıya güncellenir. Başarılı kayıt
+`DeviceTokenRegisteredIntegrationEvent` (`catering.device-token-registered-events`) yayınlar —
+[NotificationService](notification-service.md) bunu dinleyip kendi önbelleğine yazar, böylece
+`userId` ile push gönderimi (bkz. NotificationService → "Push bildirim gönder (UserId ile)")
+çalışabilir.
+
+### Cihaz token'ını iptal et
+
+```bash
+curl --location 'http://localhost:5101/api/users/me/device-tokens/revoke' \
+--header 'Authorization: Bearer {{accessToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "token": "device-token-123"
+}'
+```
+
+Yanıt: `204 No Content` (token kayıtlı değilse de aynı yanıt döner). Uygulamadan çıkış yapan
+cihazlarda çağrılması önerilir; `DeviceTokenRevokedIntegrationEvent` yayınlanır.
+
 ## Departmanlar (`/api/departments`) — `Authorize` gerektirir
 
 ### Listele — herhangi bir giriş yapmış kullanıcı

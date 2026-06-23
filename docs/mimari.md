@@ -10,15 +10,15 @@ src/
   Services/
     User/
       Catering.UserService.Domain         - User, Department, Position, RefreshToken,
-                                             PasswordResetRequest, enum'lar, domain event'ler
+                                             PasswordResetRequest, DeviceToken, enum'lar, domain event'ler
       Catering.UserService.Application    - Command/Query'ler, DTO'lar, repository/servis arayüzleri
       Catering.UserService.Infrastructure - EF Core (PostgreSQL), BCrypt, JWT üretimi, seed
       Catering.UserService.Api            - ASP.NET Core Web API, JWT auth, controller'lar
     Notification/
-      Catering.NotificationService.Domain         - Notification aggregate (Email/Sms/Push)
-      Catering.NotificationService.Application    - Command/Query'ler, UserCreated event handler'ı
-      Catering.NotificationService.Infrastructure - EF Core (PostgreSQL), konsola loglayan kanal
-                                                     gönderenler, Kafka consumer hosted service
+      Catering.NotificationService.Domain         - Notification aggregate (Email/Sms/Push), DeviceToken (cache)
+      Catering.NotificationService.Application    - Command/Query'ler, UserCreated/DeviceToken event handler'ları
+      Catering.NotificationService.Infrastructure - EF Core (PostgreSQL), SMTP/Firebase kanal
+                                                     gönderenler, Kafka consumer hosted service'ler
       Catering.NotificationService.Api            - ASP.NET Core Web API, controller'lar
 ```
 
@@ -38,7 +38,7 @@ açıkça görülür.
 Örnek akış: `POST /api/auth/register` → `RegisterUserCommand` kullanıcıyı kaydeder ve
 `UserCreatedIntegrationEvent`'i `catering.user-events`'e yayınlar → NotificationService'in
 `UserCreatedConsumer`'ı bunu yakalar → `SendEmailNotificationCommand`'ı tetikler → karşılama
-e-postası "gönderilir" (stub `IEmailSender` tarafından konsola loglanır) ve kaydedilir →
+e-postası `SmtpEmailSender` ile gerçekten gönderilir ve kaydedilir →
 `NotificationSentIntegrationEvent`'i `catering.notification-events`'e yayınlar.
 
 Tüm topic/event listesi için [Kafka Olayları](kafka-olaylari.md) sayfasına bakın.
@@ -56,11 +56,16 @@ için standart bir mikroservis tercihidir.
 
 - **JWT secret** şu an `appsettings.json`'da düz metin olarak duruyor (`Jwt:Secret`).
   Production'da bir secret manager'a (Azure Key Vault, AWS Secrets Manager, ortam değişkeni vb.)
-  taşınmalı. Aynı durum `Smtp:Password` için de geçerlidir — kurulum için
-  [NotificationService](notification-service.md) → "Email kurulumu" sayfasına bakın.
-- **SMS ve push hâlâ stub**: `ConsoleSmsSender` / `ConsolePushNotificationSender` sadece konsola
-  loglar, gerçek bir sağlayıcıya gitmez. Email artık `SmtpEmailSender` ile gerçek SMTP üzerinden
-  gönderiliyor.
+  taşınmalı. Aynı durum `Smtp:Password` ve `Firebase:CredentialsJson` için de geçerlidir — kurulum
+  için [NotificationService](notification-service.md) → "Email kurulumu" / "Push (Firebase)
+  kurulumu" sayfalarına bakın.
+- **SMS hâlâ stub**: `ConsoleSmsSender` sadece konsola loglar, gerçek bir sağlayıcıya gitmez.
+  Email ve push artık sırasıyla `SmtpEmailSender` / `FirebaseCloudMessagingSender` ile gerçek
+  SMTP/Firebase üzerinden gönderiliyor.
+- **Device token önbelleği eventual-consistent**: NotificationService'teki `device_tokens` tablosu,
+  UserService'in yayınladığı `DeviceTokenRegisteredEvents`/`DeviceTokenRevokedEvents`'e dayanan bir
+  okuma önbelleğidir — UserService'teki kayıt ile NotificationService'in onu görmesi arasında kısa
+  bir gecikme olabilir (outbox yokluğunun bir başka sonucu, aşağıya bakın).
 - **Outbox pattern yok**: yukarıda açıklandı.
 - **`Register` herkese açık** (`AllowAnonymous`): self-service kayıt senaryosu için uygundur.
   Eğer kayıt sadece İK tarafından yapılmalıysa, bu uca `[Authorize(Roles = "HRAdmin,SuperAdmin")]`
