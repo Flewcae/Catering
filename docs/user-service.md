@@ -7,11 +7,15 @@ Aşağıdaki tüm istekler Postman'da kullanılmak üzere hazırlanmıştır: he
 ile yapıştırabilir veya bir isteği düzenlerken **Code** panelinden "cURL" formatını seçip
 üzerine yapıştırabilirsiniz.
 
-> ⚠️ Komutlardaki `{{baseUrl}}`, `{{adminToken}}`, `{{accessToken}}`, `{{refreshToken}}`,
-> `{{departmentId}}`, `{{positionId}}`, `{{userId}}` Postman **collection variable**'larıdır.
-> Postman bunları yalnızca istek Postman üzerinden gönderildiğinde çözer (bir terminalde
-> çalıştırırsanız literal metin olarak gönderilir). Kurulum için aşağıdaki "Postman değişkenleri"
-> bölümüne ve [Sorun Giderme](sorun-giderme.md) sayfasına bakın.
+URL `http://localhost:5101` olarak gömülüdür — Docker dışında lokal çalıştırıyorsanız
+`http://localhost:5049` ile değiştirin.
+
+> ⚠️ Komutlardaki `{{adminToken}}`, `{{accessToken}}`, `{{refreshToken}}`, `{{departmentId}}`,
+> `{{positionId}}`, `{{userId}}` Postman **collection variable**'larıdır (token/id'ler her
+> çalıştırmada değiştiği için bunlar sabit yazılamaz). Postman bunları yalnızca istek Postman
+> üzerinden gönderildiğinde çözer (bir terminalde çalıştırırsanız literal metin olarak
+> gönderilir). Kurulum için aşağıdaki "Postman değişkenleri" bölümüne ve
+> [Sorun Giderme](sorun-giderme.md) sayfasına bakın.
 
 ## Postman değişkenleri
 
@@ -19,7 +23,6 @@ Collection'ınızda (Collection → ... → Edit → Variables) şu değişkenle
 
 | Değişken | Örnek değer |
 |---|---|
-| `baseUrl` | `http://localhost:5101` |
 | `adminToken` | (boş — aşağıdaki admin girişiyle otomatik dolar) |
 | `accessToken` | (boş — kullanıcı girişiyle otomatik dolar) |
 | `refreshToken` | (boş — kullanıcı girişiyle otomatik dolar) |
@@ -34,7 +37,7 @@ düzenlemeniz gerekmez.
 ### Admin girişi (id'leri toplamak için)
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/login' \
+curl --location 'http://localhost:5101/api/auth/login' \
 --header 'Content-Type: application/json' \
 --data '{
   "email": "admin@catering.local",
@@ -52,7 +55,7 @@ pm.collectionVariables.set("adminToken", body.accessToken);
 ### Departman id'si al
 
 ```bash
-curl --location '{{baseUrl}}/api/departments' \
+curl --location 'http://localhost:5101/api/departments' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
@@ -69,7 +72,7 @@ oluşturun.
 ### Pozisyon id'si al
 
 ```bash
-curl --location '{{baseUrl}}/api/positions' \
+curl --location 'http://localhost:5101/api/positions' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
@@ -88,7 +91,7 @@ oluşturun.
 ### Kayıt
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/register' \
+curl --location 'http://localhost:5101/api/auth/register' \
 --header 'Content-Type: application/json' \
 --data '{
   "email": "ayse.yilmaz@catering.local",
@@ -124,7 +127,7 @@ haneli bir sayı kabul edilmez.
 ### Giriş
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/login' \
+curl --location 'http://localhost:5101/api/auth/login' \
 --header 'Content-Type: application/json' \
 --data '{
   "email": "ayse.yilmaz@catering.local",
@@ -160,7 +163,7 @@ durumdaysa (`Suspended`, `Terminated` vb.) giriş `401` döner.
 ### Access token yenileme (refresh)
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/refresh-token' \
+curl --location 'http://localhost:5101/api/auth/refresh-token' \
 --header 'Content-Type: application/json' \
 --data '{
   "refreshToken": "{{refreshToken}}"
@@ -173,7 +176,7 @@ yapılırsa `401` döner.
 ### Çıkış (logout)
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/logout' \
+curl --location 'http://localhost:5101/api/auth/logout' \
 --header 'Content-Type: application/json' \
 --data '{
   "refreshToken": "{{refreshToken}}"
@@ -185,7 +188,7 @@ Yanıt: `204 No Content`. Verilen refresh token'ı iptal eder.
 ### Şifremi unuttum (şifre sıfırlama isteği)
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/forgot-password' \
+curl --location 'http://localhost:5101/api/auth/forgot-password' \
 --header 'Content-Type: application/json' \
 --data '{
   "email": "ayse.yilmaz@catering.local",
@@ -208,7 +211,7 @@ docker exec catering-kafka /opt/kafka/bin/kafka-console-consumer.sh \
 ### Şifre sıfırlama (kod ile)
 
 ```bash
-curl --location '{{baseUrl}}/api/auth/reset-password' \
+curl --location 'http://localhost:5101/api/auth/reset-password' \
 --header 'Content-Type: application/json' \
 --data '{
   "email": "ayse.yilmaz@catering.local",
@@ -225,14 +228,14 @@ iptal edilir ve `PasswordChangedIntegrationEvent` yayınlanır.
 ### Kendi profilim
 
 ```bash
-curl --location '{{baseUrl}}/api/users/me' \
+curl --location 'http://localhost:5101/api/users/me' \
 --header 'Authorization: Bearer {{accessToken}}'
 ```
 
 ### Profilimi güncelle
 
 ```bash
-curl --location --request PUT '{{baseUrl}}/api/users/me' \
+curl --location --request PUT 'http://localhost:5101/api/users/me' \
 --header 'Authorization: Bearer {{accessToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -251,7 +254,7 @@ pozisyon, maaş, durum admin uçlarındandır.
 ### Şifremi değiştir
 
 ```bash
-curl --location '{{baseUrl}}/api/users/me/change-password' \
+curl --location 'http://localhost:5101/api/users/me/change-password' \
 --header 'Authorization: Bearer {{accessToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -266,21 +269,21 @@ cihazlardan oturum kapanır) ve `PasswordChangedIntegrationEvent` yayınlanır.
 ### Kullanıcı listesi — `Manager`, `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl --location '{{baseUrl}}/api/users' \
+curl --location 'http://localhost:5101/api/users' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
 ### Id ile kullanıcı — `Manager`, `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl --location '{{baseUrl}}/api/users/{{userId}}' \
+curl --location 'http://localhost:5101/api/users/{{userId}}' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
 ### İstihdam bilgilerini güncelle (admin) — `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl --location --request PUT '{{baseUrl}}/api/users/{{userId}}/employment-details' \
+curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/employment-details' \
 --header 'Authorization: Bearer {{adminToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -296,7 +299,7 @@ curl --location --request PUT '{{baseUrl}}/api/users/{{userId}}/employment-detai
 ### Kullanıcı durumunu güncelle (admin) — `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl --location --request PUT '{{baseUrl}}/api/users/{{userId}}/status' \
+curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/status' \
 --header 'Authorization: Bearer {{adminToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -314,14 +317,14 @@ durumunda `terminationDate` verilmezse otomatik olarak bugünün tarihi atanır.
 ### Listele — herhangi bir giriş yapmış kullanıcı
 
 ```bash
-curl --location '{{baseUrl}}/api/departments' \
+curl --location 'http://localhost:5101/api/departments' \
 --header 'Authorization: Bearer {{accessToken}}'
 ```
 
 ### Oluştur — `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl --location '{{baseUrl}}/api/departments' \
+curl --location 'http://localhost:5101/api/departments' \
 --header 'Authorization: Bearer {{adminToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -335,14 +338,14 @@ curl --location '{{baseUrl}}/api/departments' \
 ### Listele — herhangi bir giriş yapmış kullanıcı
 
 ```bash
-curl --location '{{baseUrl}}/api/positions' \
+curl --location 'http://localhost:5101/api/positions' \
 --header 'Authorization: Bearer {{accessToken}}'
 ```
 
 ### Oluştur — `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl --location '{{baseUrl}}/api/positions' \
+curl --location 'http://localhost:5101/api/positions' \
 --header 'Authorization: Bearer {{adminToken}}' \
 --header 'Content-Type: application/json' \
 --data '{

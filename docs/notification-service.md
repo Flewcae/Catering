@@ -7,17 +7,18 @@ Kafka event'leri üzerinden otomatik tetiklenir.
 
 Aşağıdaki istekler, [UserService](user-service.md) sayfasındakiyle aynı mantıkla, Postman'a
 doğrudan kopyalanıp **Import → Raw text** ile veya bir isteği düzenlerken **Code** panelinden
-yapıştırılabilen eksiksiz `curl` komutlarıdır. `{{baseUrl}}` ve `{{userId}}` Postman collection
-variable'larıdır — `{{userId}}`, UserService collection'ındaki "Kayıt" isteğiyle dolan
-değerdir (NotificationService bunu sadece bir etiket olarak saklar, UserService'te var olup
-olmadığını doğrulamaz). Bu servis için ayrı bir collection kullanıyorsanız, `userId`
-değişkenini elle de girebilirsiniz. `baseUrl` değerini bu sayfa için `http://localhost:5102`
-(Docker) veya `http://localhost:5261` (lokal) olarak ayarlayın.
+yapıştırılabilen eksiksiz `curl` komutlarıdır. URL `http://localhost:5102` olarak gömülüdür —
+Docker dışında lokal çalıştırıyorsanız `http://localhost:5261` ile değiştirin.
+
+`{{userId}}` bir Postman **collection variable**'dır — UserService collection'ındaki "Kayıt"
+isteğiyle otomatik dolan değerdir (NotificationService bunu sadece bir etiket olarak saklar,
+UserService'te var olup olmadığını doğrulamaz). Bu servis için ayrı bir collection
+kullanıyorsanız, `userId` değişkenini elle de girebilirsiniz.
 
 ## Email gönder
 
 ```bash
-curl --location '{{baseUrl}}/api/notifications/email' \
+curl --location 'http://localhost:5102/api/notifications/email' \
 --header 'Content-Type: application/json' \
 --data '{
   "userId": "{{userId}}",
@@ -30,7 +31,7 @@ curl --location '{{baseUrl}}/api/notifications/email' \
 ## SMS gönder
 
 ```bash
-curl --location '{{baseUrl}}/api/notifications/sms' \
+curl --location 'http://localhost:5102/api/notifications/sms' \
 --header 'Content-Type: application/json' \
 --data '{
   "userId": "{{userId}}",
@@ -42,7 +43,7 @@ curl --location '{{baseUrl}}/api/notifications/sms' \
 ## Push bildirim gönder
 
 ```bash
-curl --location '{{baseUrl}}/api/notifications/push' \
+curl --location 'http://localhost:5102/api/notifications/push' \
 --header 'Content-Type: application/json' \
 --data '{
   "userId": "{{userId}}",
@@ -62,7 +63,7 @@ yazıp `DependencyInjection.cs`'te kayıt etmeniz yeterlidir.
 ## Kullanıcının bildirimlerini listele
 
 ```bash
-curl --location '{{baseUrl}}/api/notifications/user/{{userId}}'
+curl --location 'http://localhost:5102/api/notifications/user/{{userId}}'
 ```
 
 Yanıt:

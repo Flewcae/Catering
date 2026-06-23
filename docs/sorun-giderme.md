@@ -10,12 +10,12 @@ System.Text.Json bunu `Guid`'e çeviremediği için tüm body geçersiz sayılı
 **Çözüm:** Önce gerçek bir departman/pozisyon id'si alın:
 
 ```bash
-curl --location '{{baseUrl}}/api/departments' \
+curl --location 'http://localhost:5101/api/departments' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
 ```bash
-curl --location '{{baseUrl}}/api/positions' \
+curl --location 'http://localhost:5101/api/positions' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
