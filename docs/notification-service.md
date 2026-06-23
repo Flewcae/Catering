@@ -3,46 +3,53 @@
 Taban URL (Docker): `http://localhost:5102` — Taban URL (lokal): `http://localhost:5261`
 
 Bu endpoint'ler `AllowAnonymous`'tur (manuel test/tetikleme amaçlıdır); normalde bildirimler
-Kafka event'leri üzerinden otomatik tetiklenir. `$USER_ID` değişkeni, [UserService](user-service.md)
-sayfasındaki "Kayıt" adımında elde edilen kullanıcı id'sidir (NotificationService bunu sadece
-bir etiket olarak saklar, UserService'te var olup olmadığını doğrulamaz).
+Kafka event'leri üzerinden otomatik tetiklenir.
+
+Aşağıdaki istekler, [UserService](user-service.md) sayfasındakiyle aynı mantıkla, Postman'a
+doğrudan kopyalanıp **Import → Raw text** ile veya bir isteği düzenlerken **Code** panelinden
+yapıştırılabilen eksiksiz `curl` komutlarıdır. `{{baseUrl}}` ve `{{userId}}` Postman collection
+variable'larıdır — `{{userId}}`, UserService collection'ındaki "Kayıt" isteğiyle dolan
+değerdir (NotificationService bunu sadece bir etiket olarak saklar, UserService'te var olup
+olmadığını doğrulamaz). Bu servis için ayrı bir collection kullanıyorsanız, `userId`
+değişkenini elle de girebilirsiniz. `baseUrl` değerini bu sayfa için `http://localhost:5102`
+(Docker) veya `http://localhost:5261` (lokal) olarak ayarlayın.
 
 ## Email gönder
 
 ```bash
-curl -s -X POST http://localhost:5102/api/notifications/email \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"userId\": \"$USER_ID\",
-    \"recipient\": \"ayse.yilmaz@catering.local\",
-    \"subject\": \"Hoş geldiniz\",
-    \"body\": \"Hesabınız oluşturuldu.\"
-  }"
+curl --location '{{baseUrl}}/api/notifications/email' \
+--header 'Content-Type: application/json' \
+--data '{
+  "userId": "{{userId}}",
+  "recipient": "ayse.yilmaz@catering.local",
+  "subject": "Hoş geldiniz",
+  "body": "Hesabınız oluşturuldu."
+}'
 ```
 
 ## SMS gönder
 
 ```bash
-curl -s -X POST http://localhost:5102/api/notifications/sms \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"userId\": \"$USER_ID\",
-    \"recipient\": \"+905551234567\",
-    \"body\": \"Şifreniz değiştirildi.\"
-  }"
+curl --location '{{baseUrl}}/api/notifications/sms' \
+--header 'Content-Type: application/json' \
+--data '{
+  "userId": "{{userId}}",
+  "recipient": "+905551234567",
+  "body": "Şifreniz değiştirildi."
+}'
 ```
 
 ## Push bildirim gönder
 
 ```bash
-curl -s -X POST http://localhost:5102/api/notifications/push \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"userId\": \"$USER_ID\",
-    \"deviceToken\": \"device-token-123\",
-    \"title\": \"Hatırlatma\",
-    \"body\": \"Yarın vardiyanız var.\"
-  }"
+curl --location '{{baseUrl}}/api/notifications/push' \
+--header 'Content-Type: application/json' \
+--data '{
+  "userId": "{{userId}}",
+  "deviceToken": "device-token-123",
+  "title": "Hatırlatma",
+  "body": "Yarın vardiyanız var."
+}'
 ```
 
 Bu üç uçtan dönen yanıt `200 OK` + bildirimin `Guid` id'sidir. Gönderim "gerçek" bir sağlayıcıya
@@ -55,7 +62,7 @@ yazıp `DependencyInjection.cs`'te kayıt etmeniz yeterlidir.
 ## Kullanıcının bildirimlerini listele
 
 ```bash
-curl -s http://localhost:5102/api/notifications/user/$USER_ID
+curl --location '{{baseUrl}}/api/notifications/user/{{userId}}'
 ```
 
 Yanıt:

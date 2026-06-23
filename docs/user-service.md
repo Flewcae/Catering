@@ -2,38 +2,95 @@
 
 Taban URL (Docker): `http://localhost:5101` — Taban URL (lokal): `http://localhost:5049`
 
-Aşağıdaki örneklerde `http://localhost:5101` kullanılmıştır, kendi ortamınıza göre değiştirin.
+Aşağıdaki tüm istekler Postman'da kullanılmak üzere hazırlanmıştır: her biri tek başına
+çalışan, eksiksiz bir `curl` komutudur — doğrudan kopyalayıp Postman'da **Import → Raw text**
+ile yapıştırabilir veya bir isteği düzenlerken **Code** panelinden "cURL" formatını seçip
+üzerine yapıştırabilirsiniz.
 
-> ⚠️ Örneklerdeki `$ADMIN_TOKEN`, `$DEPARTMENT_ID`, `$POSITION_ID`, `$ACCESS_TOKEN`, `$USER_ID`
-> kabuk (shell) değişkenidir. JSON body içine literal metin olarak yapıştırmayın — aşağıdaki
-> "Ortam Hazırlığı" adımındaki komutları aynı terminalde çalıştırıp değişkenleri doldurun.
-> Postman kullanıyorsanız bkz. [Sorun Giderme](sorun-giderme.md).
+> ⚠️ Komutlardaki `{{baseUrl}}`, `{{adminToken}}`, `{{accessToken}}`, `{{refreshToken}}`,
+> `{{departmentId}}`, `{{positionId}}`, `{{userId}}` Postman **collection variable**'larıdır.
+> Postman bunları yalnızca istek Postman üzerinden gönderildiğinde çözer (bir terminalde
+> çalıştırırsanız literal metin olarak gönderilir). Kurulum için aşağıdaki "Postman değişkenleri"
+> bölümüne ve [Sorun Giderme](sorun-giderme.md) sayfasına bakın.
 
-## Ortam hazırlığı (token ve id'leri almak)
+## Postman değişkenleri
+
+Collection'ınızda (Collection → ... → Edit → Variables) şu değişkenleri tanımlayın:
+
+| Değişken | Örnek değer |
+|---|---|
+| `baseUrl` | `http://localhost:5101` |
+| `adminToken` | (boş — aşağıdaki admin girişiyle otomatik dolar) |
+| `accessToken` | (boş — kullanıcı girişiyle otomatik dolar) |
+| `refreshToken` | (boş — kullanıcı girişiyle otomatik dolar) |
+| `departmentId` | (boş — departman listesiyle otomatik dolar) |
+| `positionId` | (boş — pozisyon listesiyle otomatik dolar) |
+| `userId` | (boş — kayıt isteğiyle otomatik dolar) |
+
+Her isteğin altındaki **Tests** kodunu o isteğin Postman "Tests" (veya "Post-response") sekmesine
+ekleyin — yanıt geldiğinde ilgili değişkeni otomatik doldurur, böylece bir sonraki isteği elle
+düzenlemeniz gerekmez.
+
+### Admin girişi (id'leri toplamak için)
 
 ```bash
-ADMIN_TOKEN=$(curl -s -X POST http://localhost:5101/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "admin@catering.local", "password": "Admin123!"}' \
-  | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
-
-DEPARTMENT_ID=$(curl -s http://localhost:5101/api/departments \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-POSITION_ID=$(curl -s http://localhost:5101/api/positions \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+curl --location '{{baseUrl}}/api/auth/login' \
+--header 'Content-Type: application/json' \
+--data '{
+  "email": "admin@catering.local",
+  "password": "Admin123!"
+}'
 ```
 
-`DEPARTMENT_ID`/`POSITION_ID` boş gelirse henüz hiç departman/pozisyon oluşturulmamış demektir —
-önce aşağıdaki "Departmanlar" / "Pozisyonlar" bölümlerindeki `POST` istekleriyle oluşturun.
+Tests:
+
+```javascript
+const body = pm.response.json();
+pm.collectionVariables.set("adminToken", body.accessToken);
+```
+
+### Departman id'si al
+
+```bash
+curl --location '{{baseUrl}}/api/departments' \
+--header 'Authorization: Bearer {{adminToken}}'
+```
+
+Tests:
+
+```javascript
+const body = pm.response.json();
+if (body.length > 0) pm.collectionVariables.set("departmentId", body[0].id);
+```
+
+Liste boş gelirse önce aşağıdaki "Departmanlar" bölümündeki `POST` isteğiyle bir departman
+oluşturun.
+
+### Pozisyon id'si al
+
+```bash
+curl --location '{{baseUrl}}/api/positions' \
+--header 'Authorization: Bearer {{adminToken}}'
+```
+
+Tests:
+
+```javascript
+const body = pm.response.json();
+if (body.length > 0) pm.collectionVariables.set("positionId", body[0].id);
+```
+
+Liste boş gelirse önce aşağıdaki "Pozisyonlar" bölümündeki `POST` isteğiyle bir pozisyon
+oluşturun.
 
 ## Kimlik doğrulama (`/api/auth`) — hepsi `AllowAnonymous`
 
 ### Kayıt
 
 ```bash
-cat > register.json << EOF
-{
+curl --location '{{baseUrl}}/api/auth/register' \
+--header 'Content-Type: application/json' \
+--data '{
   "email": "ayse.yilmaz@catering.local",
   "password": "Passw0rd!",
   "firstName": "Ayse",
@@ -42,18 +99,20 @@ cat > register.json << EOF
   "phoneNumber": "+905551234567",
   "birthDate": "1990-05-01",
   "address": "Istanbul",
-  "departmentId": "$DEPARTMENT_ID",
-  "positionId": "$POSITION_ID",
+  "departmentId": "{{departmentId}}",
+  "positionId": "{{positionId}}",
   "hireDate": "2026-01-15",
   "hasDisability": false,
   "disabilityDescription": null,
   "salaryCeiling": null,
   "notes": null
-}
-EOF
+}'
+```
 
-USER_ID=$(curl -s -X POST http://localhost:5101/api/auth/register \
-  -H "Content-Type: application/json" --data-binary @register.json | tr -d '"')
+Tests:
+
+```javascript
+pm.collectionVariables.set("userId", pm.response.text().replace(/"/g, ""));
 ```
 
 Yanıt: `200 OK` → yeni kullanıcının `Guid` id'si. Olası hatalar: TC kimlik no algoritması
@@ -65,12 +124,20 @@ haneli bir sayı kabul edilmez.
 ### Giriş
 
 ```bash
-LOGIN=$(curl -s -X POST http://localhost:5101/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "ayse.yilmaz@catering.local", "password": "Passw0rd!"}')
+curl --location '{{baseUrl}}/api/auth/login' \
+--header 'Content-Type: application/json' \
+--data '{
+  "email": "ayse.yilmaz@catering.local",
+  "password": "Passw0rd!"
+}'
+```
 
-ACCESS_TOKEN=$(echo "$LOGIN" | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
-REFRESH_TOKEN=$(echo "$LOGIN" | grep -o '"refreshToken":"[^"]*"' | cut -d'"' -f4)
+Tests:
+
+```javascript
+const body = pm.response.json();
+pm.collectionVariables.set("accessToken", body.accessToken);
+pm.collectionVariables.set("refreshToken", body.refreshToken);
 ```
 
 Yanıt:
@@ -93,9 +160,11 @@ durumdaysa (`Suspended`, `Terminated` vb.) giriş `401` döner.
 ### Access token yenileme (refresh)
 
 ```bash
-curl -s -X POST http://localhost:5101/api/auth/refresh-token \
-  -H "Content-Type: application/json" \
-  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
+curl --location '{{baseUrl}}/api/auth/refresh-token' \
+--header 'Content-Type: application/json' \
+--data '{
+  "refreshToken": "{{refreshToken}}"
+}'
 ```
 
 Kullanılan refresh token rotation ile geçersiz hâle gelir — aynı token ile ikinci kez çağrı
@@ -104,9 +173,11 @@ yapılırsa `401` döner.
 ### Çıkış (logout)
 
 ```bash
-curl -s -X POST http://localhost:5101/api/auth/logout \
-  -H "Content-Type: application/json" \
-  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
+curl --location '{{baseUrl}}/api/auth/logout' \
+--header 'Content-Type: application/json' \
+--data '{
+  "refreshToken": "{{refreshToken}}"
+}'
 ```
 
 Yanıt: `204 No Content`. Verilen refresh token'ı iptal eder.
@@ -114,16 +185,19 @@ Yanıt: `204 No Content`. Verilen refresh token'ı iptal eder.
 ### Şifremi unuttum (şifre sıfırlama isteği)
 
 ```bash
-curl -s -X POST http://localhost:5101/api/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d '{"email": "ayse.yilmaz@catering.local", "channel": "Email"}'
+curl --location '{{baseUrl}}/api/auth/forgot-password' \
+--header 'Content-Type: application/json' \
+--data '{
+  "email": "ayse.yilmaz@catering.local",
+  "channel": "Email"
+}'
 ```
 
 `channel`: `Email` veya `Sms`. Yanıt her zaman `204 No Content` (email enumeration'ı önlemek
 için). Email varsa, 6 haneli kod üretilir, hash'lenip 15 dakika geçerlilikle saklanır ve
 `PasswordResetRequestedIntegrationEvent` (`catering.password-reset-requested-events`)
 yayınlanır. NotificationService bunu henüz dinlemiyor (bkz. [Mimari](mimari.md)) — kodu görmek
-için Kafka topic'ini doğrudan tüketin:
+için Kafka topic'ini doğrudan tüketin (bu bir HTTP isteği değildir, terminalde çalıştırılır):
 
 ```bash
 docker exec catering-kafka /opt/kafka/bin/kafka-console-consumer.sh \
@@ -134,9 +208,13 @@ docker exec catering-kafka /opt/kafka/bin/kafka-console-consumer.sh \
 ### Şifre sıfırlama (kod ile)
 
 ```bash
-curl -s -X POST http://localhost:5101/api/auth/reset-password \
-  -H "Content-Type: application/json" \
-  -d '{"email": "ayse.yilmaz@catering.local", "code": "967951", "newPassword": "ResetPassw0rd!"}'
+curl --location '{{baseUrl}}/api/auth/reset-password' \
+--header 'Content-Type: application/json' \
+--data '{
+  "email": "ayse.yilmaz@catering.local",
+  "code": "967951",
+  "newPassword": "ResetPassw0rd!"
+}'
 ```
 
 Kod yanlış/süresi dolmuş/zaten kullanılmışsa `401`. Başarılı sıfırlamada tüm refresh token'lar
@@ -147,18 +225,24 @@ iptal edilir ve `PasswordChangedIntegrationEvent` yayınlanır.
 ### Kendi profilim
 
 ```bash
-curl -s http://localhost:5101/api/users/me -H "Authorization: Bearer $ACCESS_TOKEN"
+curl --location '{{baseUrl}}/api/users/me' \
+--header 'Authorization: Bearer {{accessToken}}'
 ```
 
 ### Profilimi güncelle
 
 ```bash
-curl -s -X PUT http://localhost:5101/api/users/me \
-  -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "Ayse", "lastName": "Yilmaz-Kaya", "phoneNumber": "+905559999999",
-    "address": "Ankara", "birthDate": "1990-05-01", "profilePictureUrl": null
-  }'
+curl --location --request PUT '{{baseUrl}}/api/users/me' \
+--header 'Authorization: Bearer {{accessToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "firstName": "Ayse",
+  "lastName": "Yilmaz-Kaya",
+  "phoneNumber": "+905559999999",
+  "address": "Ankara",
+  "birthDate": "1990-05-01",
+  "profilePictureUrl": null
+}'
 ```
 
 Sadece kendi adı/soyadı/telefon/adres/doğum tarihi/profil resmi güncellenebilir — departman,
@@ -167,9 +251,13 @@ pozisyon, maaş, durum admin uçlarındandır.
 ### Şifremi değiştir
 
 ```bash
-curl -s -X POST http://localhost:5101/api/users/me/change-password \
-  -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" \
-  -d '{"currentPassword": "Passw0rd!", "newPassword": "NewPassw0rd!"}'
+curl --location '{{baseUrl}}/api/users/me/change-password' \
+--header 'Authorization: Bearer {{accessToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "currentPassword": "Passw0rd!",
+  "newPassword": "NewPassw0rd!"
+}'
 ```
 
 Mevcut şifre yanlışsa `401`. Başarılı değişiklikte tüm refresh token'lar iptal edilir (diğer
@@ -178,40 +266,43 @@ cihazlardan oturum kapanır) ve `PasswordChangedIntegrationEvent` yayınlanır.
 ### Kullanıcı listesi — `Manager`, `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl -s http://localhost:5101/api/users -H "Authorization: Bearer $ADMIN_TOKEN"
+curl --location '{{baseUrl}}/api/users' \
+--header 'Authorization: Bearer {{adminToken}}'
 ```
 
 ### Id ile kullanıcı — `Manager`, `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl -s http://localhost:5101/api/users/$USER_ID -H "Authorization: Bearer $ADMIN_TOKEN"
+curl --location '{{baseUrl}}/api/users/{{userId}}' \
+--header 'Authorization: Bearer {{adminToken}}'
 ```
 
 ### İstihdam bilgilerini güncelle (admin) — `HRAdmin`, `SuperAdmin`
 
 ```bash
-cat > employment.json << EOF
-{
-  "departmentId": "$DEPARTMENT_ID",
-  "positionId": "$POSITION_ID",
+curl --location --request PUT '{{baseUrl}}/api/users/{{userId}}/employment-details' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "departmentId": "{{departmentId}}",
+  "positionId": "{{positionId}}",
   "salaryCeiling": 50000,
   "hasDisability": false,
   "disabilityDescription": null,
   "notes": "Terfi"
-}
-EOF
-
-curl -s -X PUT http://localhost:5101/api/users/$USER_ID/employment-details \
-  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  --data-binary @employment.json
+}'
 ```
 
 ### Kullanıcı durumunu güncelle (admin) — `HRAdmin`, `SuperAdmin`
 
 ```bash
-curl -s -X PUT http://localhost:5101/api/users/$USER_ID/status \
-  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"newStatus": "Suspended", "terminationDate": null}'
+curl --location --request PUT '{{baseUrl}}/api/users/{{userId}}/status' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "newStatus": "Suspended",
+  "terminationDate": null
+}'
 ```
 
 `newStatus`: `Active`, `Inactive`, `OnLeave`, `Suspended`, `Terminated`. `Active` dışına geçişte
@@ -220,26 +311,44 @@ durumunda `terminationDate` verilmezse otomatik olarak bugünün tarihi atanır.
 
 ## Departmanlar (`/api/departments`) — `Authorize` gerektirir
 
-```bash
-# Listele — herhangi bir giriş yapmış kullanıcı
-curl -s http://localhost:5101/api/departments -H "Authorization: Bearer $ACCESS_TOKEN"
+### Listele — herhangi bir giriş yapmış kullanıcı
 
-# Oluştur — HRAdmin, SuperAdmin
-curl -s -X POST http://localhost:5101/api/departments \
-  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"name": "Bilgi Teknolojileri", "description": "Yazılım ve altyapı ekibi"}'
+```bash
+curl --location '{{baseUrl}}/api/departments' \
+--header 'Authorization: Bearer {{accessToken}}'
+```
+
+### Oluştur — `HRAdmin`, `SuperAdmin`
+
+```bash
+curl --location '{{baseUrl}}/api/departments' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "name": "Bilgi Teknolojileri",
+  "description": "Yazılım ve altyapı ekibi"
+}'
 ```
 
 ## Pozisyonlar (`/api/positions`) — `Authorize` gerektirir
 
-```bash
-# Listele — herhangi bir giriş yapmış kullanıcı
-curl -s http://localhost:5101/api/positions -H "Authorization: Bearer $ACCESS_TOKEN"
+### Listele — herhangi bir giriş yapmış kullanıcı
 
-# Oluştur — HRAdmin, SuperAdmin
-curl -s -X POST http://localhost:5101/api/positions \
-  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"name": "Yazılım Mühendisi", "description": null}'
+```bash
+curl --location '{{baseUrl}}/api/positions' \
+--header 'Authorization: Bearer {{accessToken}}'
+```
+
+### Oluştur — `HRAdmin`, `SuperAdmin`
+
+```bash
+curl --location '{{baseUrl}}/api/positions' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "name": "Yazılım Mühendisi",
+  "description": null
+}'
 ```
 
 ## Hata formatı

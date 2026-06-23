@@ -10,12 +10,18 @@ System.Text.Json bunu `Guid`'e çeviremediği için tüm body geçersiz sayılı
 **Çözüm:** Önce gerçek bir departman/pozisyon id'si alın:
 
 ```bash
-curl -s http://localhost:5101/api/departments -H "Authorization: Bearer $ADMIN_TOKEN"
-curl -s http://localhost:5101/api/positions -H "Authorization: Bearer $ADMIN_TOKEN"
+curl --location '{{baseUrl}}/api/departments' \
+--header 'Authorization: Bearer {{adminToken}}'
 ```
 
-ve bu id'leri kullanın. [UserService](user-service.md) sayfasındaki örnekler bunu otomatik
-yapan bir kabuk değişkeni zinciri içerir.
+```bash
+curl --location '{{baseUrl}}/api/positions' \
+--header 'Authorization: Bearer {{adminToken}}'
+```
+
+ve bu id'leri kullanın. [UserService](user-service.md) sayfasındaki örnekler, bu id'leri
+Postman "Tests" scriptiyle otomatik olarak `departmentId`/`positionId` collection variable'larına
+yazan bir zincir içerir.
 
 ## "TC Identity Number is not valid."
 
