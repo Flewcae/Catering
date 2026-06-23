@@ -27,6 +27,18 @@ Her API, Development ortamında açılışta veritabanı şemasını otomatik ol
 
 ## Seçenek B — Tüm stack Docker Compose ile
 
+Email gönderimi (bkz. [NotificationService](notification-service.md) → "Email kurulumu") gerçek
+bir SMTP sunucusu gerektirir. Docker Compose bu bilgileri proje köküdeki `.env` dosyasından okur
+(`.env`, `.gitignore`'da olduğu için git'e girmez). İlk kurulumda:
+
+```bash
+cp .env.example .env
+```
+
+ve `.env` içindeki `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS` alanlarını
+gerçek SMTP bilgilerinizle doldurun. `.env` boş bırakılırsa email gönderimi başarısız olur ama
+servis çökmez — bildirim sadece `Failed` durumunda kaydedilir.
+
 ```bash
 docker compose up --build
 ```

@@ -71,6 +71,13 @@ services:
       ConnectionStrings__NotificationDb: "Host=notification-db;Port=5432;Database=catering_notifications;Username=postgres;Password=postgres"
       Kafka__BootstrapServers: "kafka:29092"
       ASPNETCORE_ENVIRONMENT: Development
+      Smtp__Host: "${SMTP_HOST:-}"
+      Smtp__Port: "${SMTP_PORT:-587}"
+      Smtp__UseSsl: "${SMTP_USE_SSL:-true}"
+      Smtp__Username: "${SMTP_USERNAME:-}"
+      Smtp__Password: "${SMTP_PASSWORD:-}"
+      Smtp__FromAddress: "${SMTP_FROM_ADDRESS:-}"
+      Smtp__FromName: "${SMTP_FROM_NAME:-Catering}"
     depends_on:
       - notification-db
       - kafka

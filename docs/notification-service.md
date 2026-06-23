@@ -66,9 +66,10 @@ doldurmanız gerekir:
 > dotnet user-secrets set "Smtp:FromAddress" "ornek@gmail.com"
 > ```
 >
-> Docker Compose ile çalıştırıyorsanız bunun yerine `docker-compose.yml`'de
-> `environment: Smtp__Host=...`, `Smtp__Username=...` vb. ortam değişkenleri tanımlayın
-> (ASP.NET Core konfigürasyonu `__` ile iç içe section'ları ortam değişkeninden okur).
+> Docker Compose ile çalıştırıyorsanız `docker-compose.yml`'i değiştirmeniz gerekmez —
+> `notification-api` servisi `Smtp__*` ortam değişkenlerini proje köküdeki `.env` dosyasından
+> (`SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD` vb.) okuyacak şekilde zaten ayarlı. Kurulum için
+> [Başlarken](baslarken.md) → "Seçenek B" bölümüne bakın.
 
 Gerçek bir alıcıya göndermeden test etmek isterseniz `Host`/`Username`/`Password` değerlerine
 [Mailtrap](https://mailtrap.io) gibi bir "sandbox" SMTP hesabı tanımlayabilirsiniz — gönderdiğiniz
