@@ -56,7 +56,11 @@ için standart bir mikroservis tercihidir.
 
 - **JWT secret** şu an `appsettings.json`'da düz metin olarak duruyor (`Jwt:Secret`).
   Production'da bir secret manager'a (Azure Key Vault, AWS Secrets Manager, ortam değişkeni vb.)
-  taşınmalı.
+  taşınmalı. Aynı durum `Smtp:Password` için de geçerlidir — kurulum için
+  [NotificationService](notification-service.md) → "Email kurulumu" sayfasına bakın.
+- **SMS ve push hâlâ stub**: `ConsoleSmsSender` / `ConsolePushNotificationSender` sadece konsola
+  loglar, gerçek bir sağlayıcıya gitmez. Email artık `SmtpEmailSender` ile gerçek SMTP üzerinden
+  gönderiliyor.
 - **Outbox pattern yok**: yukarıda açıklandı.
 - **`Register` herkese açık** (`AllowAnonymous`): self-service kayıt senaryosu için uygundur.
   Eğer kayıt sadece İK tarafından yapılmalıysa, bu uca `[Authorize(Roles = "HRAdmin,SuperAdmin")]`

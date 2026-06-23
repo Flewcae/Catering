@@ -19,7 +19,8 @@ public static class DependencyInjection
 
         services.AddScoped<INotificationRepository, NotificationRepository>();
 
-        services.AddScoped<IEmailSender, ConsoleEmailSender>();
+        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<ISmsSender, ConsoleSmsSender>();
         services.AddScoped<IPushNotificationSender, ConsolePushNotificationSender>();
 
