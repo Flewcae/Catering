@@ -1,10 +1,9 @@
 using Catering.BuildingBlocks.CQRS;
 
-namespace Catering.UserService.Application.Commands.RegisterUser;
+namespace Catering.UserService.Application.Commands.CreateUserAccount;
 
-public sealed record RegisterUserCommand(
+public sealed record CreateUserAccountCommand(
     string Email,
-    string Password,
     string FirstName,
     string LastName,
     string TcIdentityNumber,

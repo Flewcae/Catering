@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY Catering.slnx .
+COPY src/BuildingBlocks/Catering.BuildingBlocks.Authorization/Catering.BuildingBlocks.Authorization.csproj src/BuildingBlocks/Catering.BuildingBlocks.Authorization/
 COPY src/BuildingBlocks/Catering.BuildingBlocks.Domain/Catering.BuildingBlocks.Domain.csproj src/BuildingBlocks/Catering.BuildingBlocks.Domain/
 COPY src/BuildingBlocks/Catering.BuildingBlocks.CQRS/Catering.BuildingBlocks.CQRS.csproj src/BuildingBlocks/Catering.BuildingBlocks.CQRS/
 COPY src/BuildingBlocks/Catering.BuildingBlocks.Messaging/Catering.BuildingBlocks.Messaging.csproj src/BuildingBlocks/Catering.BuildingBlocks.Messaging/

@@ -8,4 +8,5 @@ public static class KafkaTopics
     public const string PasswordChangedEvents = "catering.password-changed-events";
     public const string DeviceTokenRegisteredEvents = "catering.device-token-registered-events";
     public const string DeviceTokenRevokedEvents = "catering.device-token-revoked-events";
+    public const string CenterCreatedEvents = "catering.center-created-events";
 }

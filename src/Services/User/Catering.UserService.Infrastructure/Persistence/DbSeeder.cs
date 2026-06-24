@@ -48,7 +48,8 @@ public static class DbSeeder
                 disabilityDescription: null,
                 salaryCeiling: null,
                 notes: "Seed ile oluşturulan varsayılan yönetici hesabı.",
-                role: SystemRole.SuperAdmin);
+                role: SystemRole.SuperAdmin,
+                passwordRegistered: true);
 
             await dbContext.Users.AddAsync(admin);
             await dbContext.SaveChangesAsync();

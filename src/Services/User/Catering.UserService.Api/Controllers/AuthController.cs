@@ -1,7 +1,6 @@
 using Catering.UserService.Application.Commands.Login;
 using Catering.UserService.Application.Commands.Logout;
 using Catering.UserService.Application.Commands.RefreshAccessToken;
-using Catering.UserService.Application.Commands.RegisterUser;
 using Catering.UserService.Application.Commands.RequestPasswordReset;
 using Catering.UserService.Application.Commands.ResetPassword;
 using Catering.UserService.Application.Dtos;
@@ -15,14 +14,6 @@ namespace Catering.UserService.Api.Controllers;
 [Route("api/auth")]
 public sealed class AuthController(IMediator mediator) : ControllerBase
 {
-    [HttpPost("register")]
-    [AllowAnonymous]
-    public async Task<ActionResult<Guid>> Register(RegisterUserCommand command, CancellationToken cancellationToken)
-    {
-        var userId = await mediator.Send(command, cancellationToken);
-        return Ok(userId);
-    }
-
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResultDto>> Login(LoginCommand command, CancellationToken cancellationToken)

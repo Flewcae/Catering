@@ -1,11 +1,18 @@
 <Solution>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.Authorization/Catering.BuildingBlocks.Authorization.csproj" />
     <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.CQRS/Catering.BuildingBlocks.CQRS.csproj" />
     <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.Domain/Catering.BuildingBlocks.Domain.csproj" />
     <Project Path="src/BuildingBlocks/Catering.BuildingBlocks.Messaging/Catering.BuildingBlocks.Messaging.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Center/">
+    <Project Path="src/Services/Center/Catering.CenterService.Api/Catering.CenterService.Api.csproj" />
+    <Project Path="src/Services/Center/Catering.CenterService.Application/Catering.CenterService.Application.csproj" />
+    <Project Path="src/Services/Center/Catering.CenterService.Domain/Catering.CenterService.Domain.csproj" />
+    <Project Path="src/Services/Center/Catering.CenterService.Infrastructure/Catering.CenterService.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Services/Notification/">
     <Project Path="src/Services/Notification/Catering.NotificationService.Api/Catering.NotificationService.Api.csproj" />
     <Project Path="src/Services/Notification/Catering.NotificationService.Application/Catering.NotificationService.Application.csproj" />

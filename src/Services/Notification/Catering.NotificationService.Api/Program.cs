@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Catering.BuildingBlocks.Authorization;
 using Catering.BuildingBlocks.Messaging;
 using Catering.NotificationService.Application;
 using Catering.NotificationService.Infrastructure;
@@ -15,6 +16,9 @@ builder.Services.AddNotificationServiceApplication();
 builder.Services.AddNotificationServiceInfrastructure(builder.Configuration);
 builder.Services.AddKafkaEventBus(builder.Configuration);
 
+builder.Services.AddSharedJwtBearerAuthentication(builder.Configuration);
+builder.Services.AddDynamicPermissionPolicies();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -27,6 +31,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

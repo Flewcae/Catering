@@ -18,6 +18,7 @@ public static class UserDtoExtensions
         user.Department.Name,
         user.PositionId,
         user.Position.Name,
+        user.CenterId,
         user.HireDate,
         user.TerminationDate,
         user.Status.ToString(),
@@ -26,6 +27,7 @@ public static class UserDtoExtensions
         user.DisabilityDescription,
         user.SalaryCeiling,
         user.Notes,
+        user.PasswordRegistered,
         user.LastLoginAt,
         user.CreatedAt);
 }

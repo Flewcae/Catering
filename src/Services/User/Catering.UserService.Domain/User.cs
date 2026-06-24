@@ -27,6 +27,8 @@ public sealed class User : AggregateRoot
     public Guid PositionId { get; private set; }
     public Position Position { get; private set; } = default!;
 
+    public Guid? CenterId { get; private set; }
+
     public DateOnly HireDate { get; private set; }
     public DateOnly? TerminationDate { get; private set; }
 
@@ -43,6 +45,8 @@ public sealed class User : AggregateRoot
     public DateTimeOffset? LastLoginAt { get; private set; }
     public int FailedLoginAttempts { get; private set; }
     public DateTimeOffset? LockedUntil { get; private set; }
+
+    public bool PasswordRegistered { get; private set; }
 
     private User()
     {
@@ -64,7 +68,8 @@ public sealed class User : AggregateRoot
         string? disabilityDescription,
         decimal? salaryCeiling,
         string? notes,
-        SystemRole role = SystemRole.Employee)
+        SystemRole role = SystemRole.Employee,
+        bool passwordRegistered = false)
     {
         var user = new User
         {
@@ -85,6 +90,7 @@ public sealed class User : AggregateRoot
             DisabilityDescription = disabilityDescription,
             SalaryCeiling = salaryCeiling,
             Notes = notes,
+            PasswordRegistered = passwordRegistered,
         };
 
         user.AddDomainEvent(new UserCreatedDomainEvent(user.Id, firstName, lastName, email, phoneNumber, role));
@@ -117,6 +123,7 @@ public sealed class User : AggregateRoot
     public void ChangePassword(string newPasswordHash)
     {
         PasswordHash = newPasswordHash;
+        PasswordRegistered = true;
         Touch();
     }
 
@@ -146,6 +153,12 @@ public sealed class User : AggregateRoot
     {
         Status = newStatus;
         TerminationDate = newStatus == UserStatus.Terminated ? terminationDate ?? DateOnly.FromDateTime(DateTime.UtcNow) : null;
+        Touch();
+    }
+
+    public void AssignCenter(Guid? centerId)
+    {
+        CenterId = centerId;
         Touch();
     }
 }

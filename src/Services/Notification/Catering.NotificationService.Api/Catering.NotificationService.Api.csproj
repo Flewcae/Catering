@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Catering.BuildingBlocks.Authorization\Catering.BuildingBlocks.Authorization.csproj" />
     <ProjectReference Include="..\Catering.NotificationService.Application\Catering.NotificationService.Application.csproj" />
     <ProjectReference Include="..\Catering.NotificationService.Infrastructure\Catering.NotificationService.Infrastructure.csproj" />
   </ItemGroup>

@@ -1,5 +1,8 @@
 using Catering.UserService.Application.Abstractions;
+using Catering.UserService.Application.Commands.AssignUserCenter;
 using Catering.UserService.Application.Commands.ChangePassword;
+using Catering.UserService.Application.Commands.CreateUserAccount;
+using Catering.UserService.Application.Commands.DeleteUser;
 using Catering.UserService.Application.Commands.RegisterDeviceToken;
 using Catering.UserService.Application.Commands.RevokeDeviceToken;
 using Catering.UserService.Application.Commands.UpdateEmploymentDetails;
@@ -28,6 +31,7 @@ public sealed class UsersController(IMediator mediator, ICurrentUserService curr
     }
 
     [HttpPut("me")]
+    [Authorize(Policy = "update_self_profile")]
     public async Task<IActionResult> UpdateMyProfile(UpdateProfileRequest request, CancellationToken cancellationToken)
     {
         await mediator.Send(
@@ -68,7 +72,7 @@ public sealed class UsersController(IMediator mediator, ICurrentUserService curr
     }
 
     [HttpGet]
-    [Authorize(Roles = "Manager,HRAdmin,SuperAdmin")]
+    [Authorize(Policy = "view_users")]
     public async Task<ActionResult<List<UserDto>>> GetUsers(CancellationToken cancellationToken)
     {
         var users = await mediator.Send(new GetUsersQuery(), cancellationToken);
@@ -76,15 +80,42 @@ public sealed class UsersController(IMediator mediator, ICurrentUserService curr
     }
 
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Manager,HRAdmin,SuperAdmin")]
+    [Authorize(Policy = "view_users")]
     public async Task<ActionResult<UserDto>> GetUserById(Guid id, CancellationToken cancellationToken)
     {
         var user = await mediator.Send(new GetUserByIdQuery(id), cancellationToken);
         return user is null ? NotFound() : Ok(user);
     }
 
+    [HttpPost]
+    [Authorize(Policy = "create_account")]
+    public async Task<ActionResult<Guid>> CreateUserAccount(CreateUserAccountCommand command, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(command, cancellationToken);
+        return Ok(id);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "delete_user")]
+    public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteUserCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/profile")]
+    [Authorize(Policy = "update_user_profile")]
+    public async Task<IActionResult> UpdateUserProfile(Guid id, UpdateProfileRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new UpdateProfileCommand(id, request.FirstName, request.LastName, request.PhoneNumber, request.Address, request.BirthDate, request.ProfilePictureUrl),
+            cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpPut("{id:guid}/employment-details")]
-    [Authorize(Roles = "HRAdmin,SuperAdmin")]
+    [Authorize(Policy = "update_employment_details")]
     public async Task<IActionResult> UpdateEmploymentDetails(Guid id, UpdateEmploymentDetailsRequest request, CancellationToken cancellationToken)
     {
         await mediator.Send(
@@ -95,10 +126,18 @@ public sealed class UsersController(IMediator mediator, ICurrentUserService curr
     }
 
     [HttpPut("{id:guid}/status")]
-    [Authorize(Roles = "HRAdmin,SuperAdmin")]
+    [Authorize(Policy = "update_user_status")]
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateUserStatusRequest request, CancellationToken cancellationToken)
     {
         await mediator.Send(new UpdateUserStatusCommand(id, request.NewStatus, request.TerminationDate), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/center")]
+    [Authorize(Policy = "assign_user_center")]
+    public async Task<IActionResult> AssignCenter(Guid id, AssignUserCenterRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new AssignUserCenterCommand(id, request.CenterId), cancellationToken);
         return NoContent();
     }
 }
@@ -114,3 +153,5 @@ public sealed record UpdateUserStatusRequest(UserStatus NewStatus, DateOnly? Ter
 public sealed record RegisterDeviceTokenRequest(string Token, string Platform);
 
 public sealed record RevokeDeviceTokenRequest(string Token);
+
+public sealed record AssignUserCenterRequest(Guid? CenterId);

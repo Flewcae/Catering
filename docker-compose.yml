@@ -45,6 +45,18 @@ services:
     volumes:
       - catering-notification-db-data:/var/lib/postgresql/data
 
+  center-db:
+    image: postgres:17-alpine
+    container_name: catering-center-db
+    environment:
+      POSTGRES_DB: catering_centers
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - catering-center-db-data:/var/lib/postgresql/data
+
   user-api:
     build:
       context: .
@@ -56,6 +68,9 @@ services:
       ConnectionStrings__UserDb: "Host=user-db;Port=5432;Database=catering_users;Username=postgres;Password=postgres"
       Kafka__BootstrapServers: "kafka:29092"
       ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Secret: "${JWT_SECRET:-Catering-Dev-Super-Secret-Key-For-JWT-Signing-2026-DO-NOT-USE-IN-PRODUCTION!}"
+      Jwt__Issuer: "${JWT_ISSUER:-Catering.UserService}"
+      Jwt__Audience: "${JWT_AUDIENCE:-Catering.Clients}"
     depends_on:
       - user-db
       - kafka
@@ -80,10 +95,32 @@ services:
       Smtp__FromName: "${SMTP_FROM_NAME:-Catering}"
       Firebase__ProjectId: "${FIREBASE_PROJECT_ID:-}"
       Firebase__CredentialsJson: "${FIREBASE_CREDENTIALS_JSON:-}"
+      Jwt__Secret: "${JWT_SECRET:-Catering-Dev-Super-Secret-Key-For-JWT-Signing-2026-DO-NOT-USE-IN-PRODUCTION!}"
+      Jwt__Issuer: "${JWT_ISSUER:-Catering.UserService}"
+      Jwt__Audience: "${JWT_AUDIENCE:-Catering.Clients}"
     depends_on:
       - notification-db
+      - kafka
+
+  center-api:
+    build:
+      context: .
+      dockerfile: src/Services/Center/Catering.CenterService.Api/Dockerfile
+    container_name: catering-center-api
+    ports:
+      - "5103:8080"
+    environment:
+      ConnectionStrings__CenterDb: "Host=center-db;Port=5432;Database=catering_centers;Username=postgres;Password=postgres"
+      Kafka__BootstrapServers: "kafka:29092"
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Secret: "${JWT_SECRET:-Catering-Dev-Super-Secret-Key-For-JWT-Signing-2026-DO-NOT-USE-IN-PRODUCTION!}"
+      Jwt__Issuer: "${JWT_ISSUER:-Catering.UserService}"
+      Jwt__Audience: "${JWT_AUDIENCE:-Catering.Clients}"
+    depends_on:
+      - center-db
       - kafka
 
 volumes:
   catering-user-db-data:
   catering-notification-db-data:
+  catering-center-db-data:

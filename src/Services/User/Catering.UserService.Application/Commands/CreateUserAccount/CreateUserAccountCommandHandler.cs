@@ -1,21 +1,22 @@
 using Catering.BuildingBlocks.CQRS;
 using Catering.BuildingBlocks.Messaging;
 using Catering.UserService.Application.Abstractions;
+using Catering.UserService.Application.Common;
 using Catering.UserService.Application.Exceptions;
 using Catering.UserService.Application.IntegrationEvents;
 using Catering.UserService.Domain;
 using Catering.UserService.Domain.Common;
 
-namespace Catering.UserService.Application.Commands.RegisterUser;
+namespace Catering.UserService.Application.Commands.CreateUserAccount;
 
-public sealed class RegisterUserCommandHandler(
+public sealed class CreateUserAccountCommandHandler(
     IUserRepository userRepository,
     IDepartmentRepository departmentRepository,
     IPositionRepository positionRepository,
     IPasswordHasher passwordHasher,
-    IEventBus eventBus) : ICommandHandler<RegisterUserCommand, Guid>
+    IEventBus eventBus) : ICommandHandler<CreateUserAccountCommand, Guid>
 {
-    public async Task<Guid> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateUserAccountCommand request, CancellationToken cancellationToken)
     {
         if (!TcIdentityNumberValidator.IsValid(request.TcIdentityNumber))
         {
@@ -42,7 +43,8 @@ public sealed class RegisterUserCommandHandler(
             throw new NotFoundException($"Position '{request.PositionId}' was not found.");
         }
 
-        var passwordHash = passwordHasher.Hash(request.Password);
+        var temporaryPassword = TemporaryPasswordGenerator.Generate();
+        var passwordHash = passwordHasher.Hash(temporaryPassword);
 
         var user = User.Register(
             request.Email,
@@ -65,7 +67,7 @@ public sealed class RegisterUserCommandHandler(
         await userRepository.SaveChangesAsync(cancellationToken);
 
         var integrationEvent = new UserCreatedIntegrationEvent(
-            user.Id, user.FirstName, user.LastName, user.Email, user.PhoneNumber, user.Role.ToString());
+            user.Id, user.FirstName, user.LastName, user.Email, user.PhoneNumber, user.Role.ToString(), temporaryPassword);
 
         await eventBus.PublishAsync(integrationEvent, KafkaTopics.UserEvents, cancellationToken);
 

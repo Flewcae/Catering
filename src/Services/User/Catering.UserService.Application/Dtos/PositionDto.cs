@@ -1,3 +1,3 @@
 namespace Catering.UserService.Application.Dtos;
 
-public sealed record PositionDto(Guid Id, string Name, string? Description);
+public sealed record PositionDto(Guid Id, string Name, string? Description, List<string> Permissions);

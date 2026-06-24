@@ -11,6 +11,7 @@ public sealed class UserDbContext(DbContextOptions<UserDbContext> options) : DbC
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetRequest> PasswordResetRequests => Set<PasswordResetRequest>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+    public DbSet<Center> Centers => Set<Center>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,8 @@ public sealed class UserDbContext(DbContextOptions<UserDbContext> options) : DbC
             builder.HasIndex(u => u.Email).IsUnique();
             builder.HasIndex(u => u.TcIdentityNumber).IsUnique();
 
+            builder.Property(u => u.CenterId);
+
             builder.HasOne(u => u.Department).WithMany().HasForeignKey(u => u.DepartmentId).OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(u => u.Position).WithMany().HasForeignKey(u => u.PositionId).OnDelete(DeleteBehavior.Restrict);
 
@@ -56,6 +59,7 @@ public sealed class UserDbContext(DbContextOptions<UserDbContext> options) : DbC
             builder.HasKey(p => p.Id);
             builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
             builder.Property(p => p.Description).HasMaxLength(1000);
+            builder.Property(p => p.Permissions).HasColumnType("text[]");
             builder.HasIndex(p => p.Name).IsUnique();
         });
 
@@ -86,6 +90,15 @@ public sealed class UserDbContext(DbContextOptions<UserDbContext> options) : DbC
             builder.HasIndex(dt => dt.Token).IsUnique();
             builder.HasIndex(dt => dt.UserId);
             builder.HasOne(dt => dt.User).WithMany().HasForeignKey(dt => dt.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Center>(builder =>
+        {
+            builder.ToTable("centers_cache");
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            builder.Property(c => c.Address).HasMaxLength(500).IsRequired();
+            builder.HasIndex(c => c.CenterId).IsUnique();
         });
     }
 }

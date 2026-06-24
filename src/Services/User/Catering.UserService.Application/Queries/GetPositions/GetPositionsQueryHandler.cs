@@ -11,6 +11,6 @@ public sealed class GetPositionsQueryHandler(IPositionRepository positionReposit
     {
         var positions = await positionRepository.GetAllAsync(cancellationToken);
 
-        return positions.Select(p => new PositionDto(p.Id, p.Name, p.Description)).ToList();
+        return positions.Select(p => new PositionDto(p.Id, p.Name, p.Description, p.Permissions)).ToList();
     }
 }

@@ -14,6 +14,7 @@ public sealed record UserDto(
     string DepartmentName,
     Guid PositionId,
     string PositionName,
+    Guid? CenterId,
     DateOnly HireDate,
     DateOnly? TerminationDate,
     string Status,
@@ -22,5 +23,6 @@ public sealed record UserDto(
     string? DisabilityDescription,
     decimal? SalaryCeiling,
     string? Notes,
+    bool PasswordRegistered,
     DateTimeOffset? LastLoginAt,
     DateTimeOffset CreatedAt);

@@ -2,16 +2,21 @@
 
 Taban URL (Docker): `http://localhost:5102` — Taban URL (lokal): `http://localhost:5261`
 
-Bu endpoint'ler `AllowAnonymous`'tur (manuel test/tetikleme amaçlıdır); normalde bildirimler
-Kafka event'leri üzerinden otomatik tetiklenir.
+Bu endpoint'ler manuel test/tetikleme amaçlıdır; normalde bildirimler Kafka event'leri üzerinden
+otomatik tetiklenir. Hepsi `Authorize` gerektirir ve her biri [UserService](user-service.md) →
+"Pozisyonlar" üzerinden Position'a tanımlanan bir **permission flag**'iyle korunur (`send_custom_email`,
+`send_custom_sms`, `send_custom_push_notification`, `view_user_notification`) — kullanıcının
+giriş yaptığı Position'da o flag yoksa `403` döner; `SuperAdmin`/`HRAdmin` rolündeki kullanıcılar
+flag'e bakılmaksızın her uca erişebilir. Token'ı doğrulamak için bu servis UserService ile aynı
+JWT secret/issuer/audience'ı kullanır (bkz. `.env` → `JWT_SECRET`/`JWT_ISSUER`/`JWT_AUDIENCE`).
 
 Aşağıdaki istekler, [UserService](user-service.md) sayfasındakiyle aynı mantıkla, Postman'a
 doğrudan kopyalanıp **Import → Raw text** ile veya bir isteği düzenlerken **Code** panelinden
 yapıştırılabilen eksiksiz `curl` komutlarıdır. URL `http://localhost:5102` olarak gömülüdür —
 Docker dışında lokal çalıştırıyorsanız `http://localhost:5261` ile değiştirin.
 
-`{{userId}}` bir Postman **collection variable**'dır — UserService collection'ındaki "Kayıt"
-isteğiyle otomatik dolan değerdir (NotificationService bunu sadece bir etiket olarak saklar,
+`{{userId}}` bir Postman **collection variable**'dır — UserService collection'ındaki "Kullanıcı
+hesabı oluştur" isteğiyle otomatik dolan değerdir (NotificationService bunu sadece bir etiket olarak saklar,
 UserService'te var olup olmadığını doğrulamaz). Bu servis için ayrı bir collection
 kullanıyorsanız, `userId` değişkenini elle de girebilirsiniz.
 
@@ -25,6 +30,24 @@ kullanıyorsanız, `userId` değişkenini elle de girebilirsiniz.
 
 SMS için gerçek sağlayıcı entegrasyonu daha sonra yapılacak; o zamana kadar bu kanal nesne üretip
 veritabanına `Sent` olarak kaydediyor ama hiçbir yere fiilen göndermiyor.
+
+## UserCreated tüketimi (geçici şifre teslimi)
+
+[UserService](user-service.md) → "Kullanıcı hesabı oluştur" ucu bir kullanıcı oluşturduğunda
+`UserCreatedIntegrationEvent`'i (`catering.user-events`) artık üretilen **geçici şifre** ile
+birlikte yayınlar. `UserCreatedConsumer`'ın tetiklediği `UserCreatedIntegrationEventHandler`:
+
+1. Kullanıcıya "Welcome to Catering" konulu, geçici şifreyi içeren bir email gönderir
+   (`SendEmailNotificationCommand` üzerinden — gerçek SMTP ile gider, bkz. "Email kurulumu").
+2. Telefon numarası varsa, aynı geçici şifreyi içeren bir SMS gönderir
+   (`SendSmsNotificationCommand` üzerinden) — **SMS kanalı şu an stub olduğu için bu mesaj
+   gerçekte hiçbir yere gitmez**, sadece konsola loglanıp veritabanına `Sent` olarak kaydedilir
+   (yukarıdaki "Kanal durumu" tablosuna bakın). Gerçek bir SMS sağlayıcısı bağlanana kadar geçici
+   şifreyi pratikte sadece email üzerinden teslim edilmiş sayın.
+
+Bu akış manuel tetiklenen bir HTTP isteği değildir — doğrudan Kafka consumer içinde MediatR
+üzerinden çalışır, dolayısıyla `NotificationsController`'daki `send_custom_*` flag'lerinden
+bağımsızdır.
 
 ## Email kurulumu
 
@@ -121,8 +144,11 @@ denemesi başarısız olur; `SendPushNotificationCommandHandler` bu hatayı yaka
 
 ## Email gönder
 
+Flag: `send_custom_email`.
+
 ```bash
 curl --location 'http://localhost:5102/api/notifications/email' \
+--header 'Authorization: Bearer {{accessToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
   "userId": "{{userId}}",
@@ -134,8 +160,11 @@ curl --location 'http://localhost:5102/api/notifications/email' \
 
 ## SMS gönder
 
+Flag: `send_custom_sms`.
+
 ```bash
 curl --location 'http://localhost:5102/api/notifications/sms' \
+--header 'Authorization: Bearer {{accessToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
   "userId": "{{userId}}",
@@ -146,8 +175,11 @@ curl --location 'http://localhost:5102/api/notifications/sms' \
 
 ## Push bildirim gönder
 
+Flag: `send_custom_push_notification`.
+
 ```bash
 curl --location 'http://localhost:5102/api/notifications/push' \
+--header 'Authorization: Bearer {{accessToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
   "userId": "{{userId}}",
@@ -173,10 +205,11 @@ token'larına göndermek için aşağıdaki uca bakın.
 [UserService](user-service.md) → "Cihaz token'ı kaydet" ile kayıt edilmiş cihaz token'ları,
 `DeviceTokenRegisteredIntegrationEvent` üzerinden NotificationService'te yerel bir önbellekte
 tutulur (`device_tokens` tablosu). Bu uç, verilen `userId`'ye kayıtlı tüm cihazlara aynı bildirimi
-gönderir:
+gönderir. Flag: `send_custom_push_notification` (yukarıdaki `/push` ucuyla aynı).
 
 ```bash
 curl --location 'http://localhost:5102/api/notifications/push/user/{{userId}}' \
+--header 'Authorization: Bearer {{accessToken}}' \
 --header 'Content-Type: application/json' \
 --data '{
   "title": "Hatırlatma",
@@ -189,8 +222,11 @@ Kullanıcının kayıtlı cihazı yoksa boş liste döner (hata fırlatmaz).
 
 ## Kullanıcının bildirimlerini listele
 
+Flag: `view_user_notification`.
+
 ```bash
-curl --location 'http://localhost:5102/api/notifications/user/{{userId}}'
+curl --location 'http://localhost:5102/api/notifications/user/{{userId}}' \
+--header 'Authorization: Bearer {{accessToken}}'
 ```
 
 Yanıt:

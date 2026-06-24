@@ -8,6 +8,7 @@
 | `catering.password-changed-events` | UserService | (henüz dinleyen yok) | `PasswordChangedIntegrationEvent` |
 | `catering.device-token-registered-events` | UserService | NotificationService | `DeviceTokenRegisteredIntegrationEvent` |
 | `catering.device-token-revoked-events` | UserService | NotificationService | `DeviceTokenRevokedIntegrationEvent` |
+| `catering.center-created-events` | CenterService | UserService | `CenterCreatedIntegrationEvent` |
 
 ## Payload örnekleri
 
@@ -16,11 +17,20 @@
 ```json
 {
   "userId": "...",
-  "email": "ayse.yilmaz@catering.local",
   "firstName": "Ayse",
-  "lastName": "Yilmaz"
+  "lastName": "Yilmaz",
+  "email": "ayse.yilmaz@catering.local",
+  "phoneNumber": "+905551234567",
+  "role": "Employee",
+  "temporaryPassword": "Xk9#mPqR2!tZ"
 }
 ```
+
+> ⚠️ Geçici şifre bu event'in içinde düz metin olarak taşınır — Kafka log'larına/retention'a
+> erişimi olan herkes bunu görebilir. Bu, projenin kabul edilmiş düz-metin-secret sınırlamasıyla
+> aynı kategoridedir (bkz. [Mimari](mimari.md) → Bilinen sınırlamalar); production'da bu event'in
+> kısa retention'lı, erişimi kısıtlı bir topic'te tutulması veya şifrenin event içinde taşınmayıp
+> ayrı, tek kullanımlık bir bağlantı/kod üzerinden iletilmesi değerlendirilmelidir.
 
 ### `PasswordResetRequestedIntegrationEvent`
 
@@ -62,6 +72,16 @@
 {
   "userId": "...",
   "token": "device-token-123"
+}
+```
+
+### `CenterCreatedIntegrationEvent`
+
+```json
+{
+  "centerId": "...",
+  "name": "Merkez Şube",
+  "address": "Atatürk Cad. No:1, İstanbul"
 }
 ```
 

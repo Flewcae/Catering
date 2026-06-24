@@ -20,7 +20,7 @@ public sealed class DepartmentsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "HRAdmin,SuperAdmin")]
+    [Authorize(Policy = "manage_departments")]
     public async Task<ActionResult<Guid>> CreateDepartment(CreateDepartmentCommand command, CancellationToken cancellationToken)
     {
         var id = await mediator.Send(command, cancellationToken);

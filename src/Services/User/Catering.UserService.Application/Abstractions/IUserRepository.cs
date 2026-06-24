@@ -9,5 +9,6 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken);
     Task<User?> GetByTcIdentityNumberAsync(string tcIdentityNumber, CancellationToken cancellationToken);
     Task<List<User>> GetAllAsync(CancellationToken cancellationToken);
+    Task DeleteAsync(User user, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

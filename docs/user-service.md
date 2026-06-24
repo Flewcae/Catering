@@ -28,7 +28,7 @@ Collection'ınızda (Collection → ... → Edit → Variables) şu değişkenle
 | `refreshToken` | (boş — kullanıcı girişiyle otomatik dolar) |
 | `departmentId` | (boş — departman listesiyle otomatik dolar) |
 | `positionId` | (boş — pozisyon listesiyle otomatik dolar) |
-| `userId` | (boş — kayıt isteğiyle otomatik dolar) |
+| `userId` | (boş — "Kullanıcı hesabı oluştur" isteğiyle otomatik dolar) |
 
 Her isteğin altındaki **Tests** kodunu o isteğin Postman "Tests" (veya "Post-response") sekmesine
 ekleyin — yanıt geldiğinde ilgili değişkeni otomatik doldurur, böylece bir sonraki isteği elle
@@ -88,41 +88,9 @@ oluşturun.
 
 ## Kimlik doğrulama (`/api/auth`) — hepsi `AllowAnonymous`
 
-### Kayıt
-
-```bash
-curl --location 'http://localhost:5101/api/auth/register' \
---header 'Content-Type: application/json' \
---data '{
-  "email": "ayse.yilmaz@catering.local",
-  "password": "Passw0rd!",
-  "firstName": "Ayse",
-  "lastName": "Yilmaz",
-  "tcIdentityNumber": "12345678950",
-  "phoneNumber": "+905551234567",
-  "birthDate": "1990-05-01",
-  "address": "Istanbul",
-  "departmentId": "{{departmentId}}",
-  "positionId": "{{positionId}}",
-  "hireDate": "2026-01-15",
-  "hasDisability": false,
-  "disabilityDescription": null,
-  "salaryCeiling": null,
-  "notes": null
-}'
-```
-
-Tests:
-
-```javascript
-pm.collectionVariables.set("userId", pm.response.text().replace(/"/g, ""));
-```
-
-Yanıt: `200 OK` → yeni kullanıcının `Guid` id'si. Olası hatalar: TC kimlik no algoritması
-geçersizse `400`, email veya TC kimlik no zaten kayıtlıysa `409`, departman/pozisyon yoksa `404`.
-
-`tcIdentityNumber` alanı gerçek TC kimlik no checksum algoritmasıyla doğrulanır — rastgele 11
-haneli bir sayı kabul edilmez.
+Self-service kayıt **yok** — hiç kimse kendi hesabını oluşturamaz. Hesaplar yalnızca
+`create_account` flag'ine sahip bir kullanıcı tarafından, aşağıdaki "Kullanıcılar" →
+"Kullanıcı hesabı oluştur" ucuyla açılır (bkz. orada şifrenin nasıl üretilip iletildiği).
 
 ### Giriş
 
@@ -223,6 +191,38 @@ curl --location 'http://localhost:5101/api/auth/reset-password' \
 Kod yanlış/süresi dolmuş/zaten kullanılmışsa `401`. Başarılı sıfırlamada tüm refresh token'lar
 iptal edilir ve `PasswordChangedIntegrationEvent` yayınlanır.
 
+## Permission flag'leri
+
+`Authorize` gerektiren her uç, aşağıdaki tabloda görülen flag'lerden biriyle korunur
+(`SuperAdmin`/`HRAdmin` rolündeki kullanıcılar flag'e bakılmaksızın her zaman geçer — bkz.
+[Mimari](mimari.md) → "Yetkilendirme: rol + permission flag"). Bir flag'i bir Position'a atamak
+için aşağıdaki "Pozisyonlar" → "Permission flag'lerini güncelle" ucunu kullanın.
+
+| Flag | Korunan uç |
+|---|---|
+| `create_account` | `POST /api/users` |
+| `delete_user` | `DELETE /api/users/{id}` |
+| `view_users` | `GET /api/users`, `GET /api/users/{id}` |
+| `update_self_profile` | `PUT /api/users/me` |
+| `update_user_profile` | `PUT /api/users/{id}/profile` |
+| `update_employment_details` | `PUT /api/users/{id}/employment-details` |
+| `update_user_status` | `PUT /api/users/{id}/status` |
+| `assign_user_center` | `PUT /api/users/{id}/center` |
+| `manage_departments` | `POST /api/departments` |
+| `manage_positions` | `POST /api/positions` |
+| `manage_centers` | [CenterService](center-service.md) → `POST /api/centers` |
+| `send_custom_email` / `send_custom_sms` / `send_custom_push_notification` / `view_user_notification` | bkz. [NotificationService](notification-service.md) |
+
+`PUT /api/positions/{id}/permissions` (flag atama ucunun kendisi) **kasıtlı olarak flag'siz** —
+sadece `HRAdmin`/`SuperAdmin` rolüyle korunur. Bunun bir flag'i olsaydı, o flag'e sahip biri
+kendi Position'ına istediği herhangi bir flag'i (örn. `delete_user`) ekleyip yetkisini
+yükseltebilirdi; bu yüzden yetki *veren* uç, yetkilerin kendisinden bağımsız tutulur.
+
+Gerçek kullanımda, hesabı olmayan bir kullanıcı için hiç flag yoktur — Position'lara hangi
+flag'lerin atanacağına siz karar verirsiniz (örn. bir "İK Uzmanı" pozisyonuna `create_account` +
+`view_users`, bir "Saha Yöneticisi" pozisyonuna sadece `view_users` + `update_employment_details`
+gibi).
+
 ## Kullanıcılar (`/api/users`) — hepsi `Authorize` gerektirir
 
 ### Kendi profilim
@@ -232,7 +232,14 @@ curl --location 'http://localhost:5101/api/users/me' \
 --header 'Authorization: Bearer {{accessToken}}'
 ```
 
+Yanıttaki `passwordRegistered: false` ise kullanıcı hâlâ admin tarafından oluşturulan geçici
+şifreyi kullanıyor demektir (bkz. "Kullanıcı hesabı oluştur" altında) — ilerideki frontend bu
+durumda kullanıcıyı doğrudan bir "şifre belirleme" ekranına yönlendirecek. `POST
+/me/change-password` ile şifresini değiştirdiğinde bu alan otomatik `true` olur.
+
 ### Profilimi güncelle
+
+Flag: `update_self_profile`.
 
 ```bash
 curl --location --request PUT 'http://localhost:5101/api/users/me' \
@@ -253,6 +260,10 @@ pozisyon, maaş, durum admin uçlarındandır.
 
 ### Şifremi değiştir
 
+Flag yok — her giriş yapmış kullanıcı kendi şifresini her zaman değiştirebilmeli (özellikle admin
+tarafından verilen geçici şifreyi ilk girişte değiştirmek için bu uç gerekli, bu yüzden bilerek
+flag'siz bırakıldı).
+
 ```bash
 curl --location 'http://localhost:5101/api/users/me/change-password' \
 --header 'Authorization: Bearer {{accessToken}}' \
@@ -264,23 +275,106 @@ curl --location 'http://localhost:5101/api/users/me/change-password' \
 ```
 
 Mevcut şifre yanlışsa `401`. Başarılı değişiklikte tüm refresh token'lar iptal edilir (diğer
-cihazlardan oturum kapanır) ve `PasswordChangedIntegrationEvent` yayınlanır.
+cihazlardan oturum kapanır), `passwordRegistered` `true`'ya çekilir ve
+`PasswordChangedIntegrationEvent` yayınlanır.
 
-### Kullanıcı listesi — `Manager`, `HRAdmin`, `SuperAdmin`
+### Kullanıcı hesabı oluştur (admin)
+
+Flag: `create_account`.
+
+```bash
+curl --location 'http://localhost:5101/api/users' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "email": "ayse.yilmaz@catering.local",
+  "firstName": "Ayse",
+  "lastName": "Yilmaz",
+  "tcIdentityNumber": "12345678950",
+  "phoneNumber": "+905551234567",
+  "birthDate": "1990-05-01",
+  "address": "Istanbul",
+  "departmentId": "{{departmentId}}",
+  "positionId": "{{positionId}}",
+  "hireDate": "2026-01-15",
+  "hasDisability": false,
+  "disabilityDescription": null,
+  "salaryCeiling": null,
+  "notes": null
+}'
+```
+
+Tests:
+
+```javascript
+pm.collectionVariables.set("userId", pm.response.text().replace(/"/g, ""));
+```
+
+Yanıt: `200 OK` → yeni kullanıcının `Guid` id'si. Olası hatalar: TC kimlik no algoritması
+geçersizse `400`, email veya TC kimlik no zaten kayıtlıysa `409`, departman/pozisyon yoksa `404`.
+`tcIdentityNumber` alanı gerçek TC kimlik no checksum algoritmasıyla doğrulanır.
+
+Body'de **şifre yok** — sunucu rastgele, güçlü bir geçici şifre üretir, kullanıcıyı
+`passwordRegistered: false` olarak oluşturur ve `UserCreatedIntegrationEvent`
+(`catering.user-events`) ile bu geçici şifreyi [NotificationService](notification-service.md)'e
+iletir; o da kullanıcıya hem email hem SMS olarak gönderir (bkz. NotificationService →
+"UserCreated tüketimi"). Kullanıcı bu şifreyle giriş yapıp `POST /me/change-password` ile kendi
+şifresini belirlediğinde `passwordRegistered` `true` olur.
+
+### Kullanıcıyı sil
+
+Flag: `delete_user`.
+
+```bash
+curl --location --request DELETE 'http://localhost:5101/api/users/{{userId}}' \
+--header 'Authorization: Bearer {{adminToken}}'
+```
+
+Yanıt: `204 No Content`. Kalıcı (hard) silme — kullanıcı bulunamazsa `404`. Kullanıcıya bağlı
+refresh token'lar, şifre sıfırlama istekleri ve cihaz token'ları cascade ile birlikte silinir.
+
+### Kullanıcı listesi
+
+Flag: `view_users`.
 
 ```bash
 curl --location 'http://localhost:5101/api/users' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
-### Id ile kullanıcı — `Manager`, `HRAdmin`, `SuperAdmin`
+### Id ile kullanıcı
+
+Flag: `view_users`.
 
 ```bash
 curl --location 'http://localhost:5101/api/users/{{userId}}' \
 --header 'Authorization: Bearer {{adminToken}}'
 ```
 
-### İstihdam bilgilerini güncelle (admin) — `HRAdmin`, `SuperAdmin`
+### Başka bir kullanıcının profilini güncelle (admin)
+
+Flag: `update_user_profile`.
+
+```bash
+curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/profile' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "firstName": "Ayse",
+  "lastName": "Yilmaz-Kaya",
+  "phoneNumber": "+905559999999",
+  "address": "Ankara",
+  "birthDate": "1990-05-01",
+  "profilePictureUrl": null
+}'
+```
+
+"Profilimi güncelle" ile aynı alanlar/aynı komut — tek fark, başkasının `id`'sini hedefleyip
+`update_self_profile` yerine `update_user_profile` flag'i gerektirmesi.
+
+### İstihdam bilgilerini güncelle (admin)
+
+Flag: `update_employment_details`.
 
 ```bash
 curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/employment-details' \
@@ -296,7 +390,9 @@ curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/employ
 }'
 ```
 
-### Kullanıcı durumunu güncelle (admin) — `HRAdmin`, `SuperAdmin`
+### Kullanıcı durumunu güncelle (admin)
+
+Flag: `update_user_status`.
 
 ```bash
 curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/status' \
@@ -311,6 +407,25 @@ curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/status
 `newStatus`: `Active`, `Inactive`, `OnLeave`, `Suspended`, `Terminated`. `Active` dışına geçişte
 kullanıcının tüm refresh token'ları otomatik iptal edilir (zorunlu çıkış). `Terminated`
 durumunda `terminationDate` verilmezse otomatik olarak bugünün tarihi atanır.
+
+### Kullanıcıyı bir Center'a ata (admin)
+
+Flag: `assign_user_center`.
+
+```bash
+curl --location --request PUT 'http://localhost:5101/api/users/{{userId}}/center' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "centerId": "{{centerId}}"
+}'
+```
+
+`centerId` [CenterService](center-service.md)'te oluşturulmuş bir Center'ın id'si olmalı —
+UserService bunu kendi yerel önbelleğine (`CenterCreatedIntegrationEvent` ile doldurulan
+`centers_cache` tablosu) bakarak doğrular; önbellekte yoksa `404` döner. `null` göndererek
+kullanıcının Center atamasını kaldırabilirsiniz. Yanıt: `204 No Content`. Atanan Center, bir
+sonraki login/refresh'te JWT'de `centerId` claim'i olarak taşınır.
 
 ### Cihaz token'ı kaydet (Firebase push)
 
@@ -354,7 +469,9 @@ curl --location 'http://localhost:5101/api/departments' \
 --header 'Authorization: Bearer {{accessToken}}'
 ```
 
-### Oluştur — `HRAdmin`, `SuperAdmin`
+### Oluştur
+
+Flag: `manage_departments`.
 
 ```bash
 curl --location 'http://localhost:5101/api/departments' \
@@ -375,7 +492,9 @@ curl --location 'http://localhost:5101/api/positions' \
 --header 'Authorization: Bearer {{accessToken}}'
 ```
 
-### Oluştur — `HRAdmin`, `SuperAdmin`
+### Oluştur
+
+Flag: `manage_positions`.
 
 ```bash
 curl --location 'http://localhost:5101/api/positions' \
@@ -387,6 +506,28 @@ curl --location 'http://localhost:5101/api/positions' \
 }'
 ```
 
+### Permission flag'lerini güncelle
+
+Flag yok — kasıtlı olarak sadece `HRAdmin`/`SuperAdmin` rolüyle korunur (bkz. yukarıdaki
+"Permission flag'leri" bölümündeki gerekçe).
+
+```bash
+curl --location --request PUT 'http://localhost:5101/api/positions/{{positionId}}/permissions' \
+--header 'Authorization: Bearer {{adminToken}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "permissions": ["send_custom_email", "view_user_notification"]
+}'
+```
+
+Yanıt: `204 No Content`. Flag'ler serbest biçimlidir (kanonik bir listeye karşı doğrulanmaz) —
+sadece `^[a-z0-9_]+$` formatına uymalı, geçersiz/boş olanlar sessizce elenir, tekrarlar
+tekilleştirilir. Bu Position'a sahip bir kullanıcı login olduğunda (veya token'ını yenilediğinde)
+JWT'sinde her flag için bir `permission` claim'i taşır — bkz. [NotificationService](notification-service.md)
+örneğin `send_custom_email` flag'ini `POST /api/notifications/email` ucunu korumak için kullanır.
+`SuperAdmin`/`HRAdmin` rolündeki kullanıcılar Position'larında flag olmasa da tüm flag-korumalı
+uçlara erişebilir.
+
 ## Hata formatı
 
 Hatalar [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) `ProblemDetails` formatında döner:
@@ -396,7 +537,7 @@ Hatalar [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) `ProblemDetails` form
   "title": "Conflict",
   "status": 409,
   "detail": "A user with this TC Identity Number already exists.",
-  "instance": "/api/auth/register"
+  "instance": "/api/users"
 }
 ```
 
@@ -404,7 +545,7 @@ Hatalar [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) `ProblemDetails` form
 |---|---|
 | `400` | Doğrulama hatası (örn. geçersiz TC kimlik no) |
 | `401` | Kimlik doğrulama hatası (yanlış şifre, geçersiz/süresi dolmuş token, kilitli/aktif olmayan hesap) |
-| `403` | Yetkisiz erişim (rol uygun değil) |
+| `403` | Yetkisiz erişim (rol uygun değil veya gerekli permission flag'i yok) |
 | `404` | Kayıt bulunamadı (kullanıcı, departman, pozisyon) |
 | `409` | Çakışma (email veya TC kimlik no zaten kayıtlı) |
 | `500` | Beklenmeyen hata — detay döndürülmez |

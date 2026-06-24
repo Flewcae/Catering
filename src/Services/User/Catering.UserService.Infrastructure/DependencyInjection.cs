@@ -1,4 +1,8 @@
+using Catering.BuildingBlocks.Messaging;
 using Catering.UserService.Application.Abstractions;
+using Catering.UserService.Application.IntegrationEventHandlers;
+using Catering.UserService.Application.IntegrationEvents;
+using Catering.UserService.Infrastructure.Messaging;
 using Catering.UserService.Infrastructure.Persistence;
 using Catering.UserService.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +26,13 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IPasswordResetRequestRepository, PasswordResetRequestRepository>();
         services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
+        services.AddScoped<ICenterRepository, CenterRepository>();
 
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
+
+        services.AddScoped<IIntegrationEventHandler<CenterCreatedIntegrationEvent>, CenterCreatedIntegrationEventHandler>();
+        services.AddHostedService<CenterCreatedConsumer>();
 
         return services;
     }

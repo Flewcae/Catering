@@ -8,12 +8,13 @@
 ## Seçenek A — Sadece altyapı Docker'da, servisler lokalde
 
 ```bash
-docker compose up -d kafka user-db notification-db
+docker compose up -d kafka user-db notification-db center-db
 ```
 
 ```bash
 dotnet run --project src/Services/User/Catering.UserService.Api
 dotnet run --project src/Services/Notification/Catering.NotificationService.Api
+dotnet run --project src/Services/Center/Catering.CenterService.Api
 ```
 
 Her API, Development ortamında açılışta veritabanı şemasını otomatik oluşturur
@@ -24,6 +25,7 @@ Her API, Development ortamında açılışta veritabanı şemasını otomatik ol
 |---|---|---|
 | UserService.Api | http://localhost:5049 | https://localhost:7105 |
 | NotificationService.Api | http://localhost:5261 | https://localhost:7180 |
+| CenterService.Api | http://localhost:5050 | https://localhost:7106 |
 
 ## Seçenek B — Tüm stack Docker Compose ile
 
@@ -39,18 +41,20 @@ cp .env.example .env
 ve `.env` içindeki `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`,
 `FIREBASE_PROJECT_ID`, `FIREBASE_CREDENTIALS_JSON` alanlarını gerçek bilgilerinizle doldurun.
 Bu alanlar boş bırakılırsa ilgili gönderim başarısız olur ama servis çökmez — bildirim sadece
-`Failed` durumunda kaydedilir.
+`Failed` durumunda kaydedilir. `JWT_SECRET`/`JWT_ISSUER`/`JWT_AUDIENCE` boş bırakılırsa geliştirme
+varsayılanı kullanılır (üç servis de aynı değeri paylaşmalı).
 
 ```bash
 docker compose up --build
 ```
 
-Kafka'yı (KRaft modu, Zookeeper'sız), iki PostgreSQL veritabanını ve iki API'yi başlatır.
+Kafka'yı (KRaft modu, Zookeeper'sız), üç PostgreSQL veritabanını ve üç API'yi başlatır.
 
 | Servis | URL |
 |---|---|
 | UserService.Api | http://localhost:5101/swagger |
 | NotificationService.Api | http://localhost:5102/swagger |
+| CenterService.Api | http://localhost:5103/swagger |
 
 > **Şema değişikliği uyarısı:** Veritabanı şeması `EnsureCreatedAsync` ile oluşturulur; bu metot
 > **var olan** bir veritabanını migrate etmez. Domain modelinde yapısal bir değişiklik

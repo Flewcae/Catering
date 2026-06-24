@@ -21,6 +21,12 @@ public sealed class UserRepository(UserDbContext dbContext) : IUserRepository
     public Task<List<User>> GetAllAsync(CancellationToken cancellationToken) =>
         dbContext.Users.AsNoTracking().Include(u => u.Department).Include(u => u.Position).ToListAsync(cancellationToken);
 
+    public Task DeleteAsync(User user, CancellationToken cancellationToken)
+    {
+        dbContext.Users.Remove(user);
+        return Task.CompletedTask;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         dbContext.SaveChangesAsync(cancellationToken);
 }

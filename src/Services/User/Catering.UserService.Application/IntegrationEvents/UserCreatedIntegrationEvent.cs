@@ -8,4 +8,5 @@ public sealed record UserCreatedIntegrationEvent(
     string LastName,
     string Email,
     string? PhoneNumber,
-    string Role) : IntegrationEvent;
+    string Role,
+    string TemporaryPassword) : IntegrationEvent;
